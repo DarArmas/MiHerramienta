@@ -76,13 +76,15 @@
                     <label for="txtDescripcion">Descripcion</label>
                     <textarea class="form-control" id="txtDescripcion" name="txtDescripcion" rows="1" required></textarea>
                 </div>
-                <div class="form-group">
+                <div class="form-group" data-tip="Que rollo">
                   <label for="txtCodigo">Codigo</label> 
                   <input type="number" class="form-control" id="txtCodigo" name="txtCodigo">
+                  <small style="color:red;">*El codigo es para agrupados</small>
                 </div>
                 <div class="form-group">
                   <label for="txtSerie">Serie</label> 
                   <input type="number" class="form-control" id="txtSerie" name="txtSerie">
+                  <small style="color:red;">*La serie es para objetos unicos</small>
                 </div>
                 <div class="form-group">
                 <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria" name="selCategoria" required>
