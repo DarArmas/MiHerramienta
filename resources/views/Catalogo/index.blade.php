@@ -34,17 +34,13 @@
           Movimientos
         </a>
         <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-        <a class="dropdown-item" href="#">Gestionar moviemientos</a> 
+        <a class="dropdown-item" href="#">Gestionar movimientos</a> 
         <div class="dropdown-divider"></div>
           <a class="dropdown-item" href="#">Entradas</a>
           <a class="dropdown-item" href="#">Salidas</a>
         </div>
       </li>
     </ul>
-    <form class="form-inline my-2 my-lg-0">
-      <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-      <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-    </form>
   </div>
 </nav>
 <div class="container">
@@ -78,21 +74,22 @@
                 @csrf
                 <div class="form-group">
                     <label for="txtDescripcion">Descripcion</label>
-                    <textarea class="form-control" id="txtDescripcion" name="txtDescripcion" rows="3"></textarea>
+                    <textarea class="form-control" id="txtDescripcion" name="txtDescripcion" rows="1" required></textarea>
                 </div>
                 <div class="form-group">
                   <label for="txtCodigo">Codigo</label> 
-                  <input type="number" class="form-control" id="txtCodigo" name="txtCodigo" aria-describedby="emailHelp">
+                  <input type="number" class="form-control" id="txtCodigo" name="txtCodigo">
                 </div>
                 <div class="form-group">
                   <label for="txtSerie">Serie</label> 
-                  <input type="number" class="form-control" id="txtSerie" name="txtSerie" aria-describedby="emailHelp">
+                  <input type="number" class="form-control" id="txtSerie" name="txtSerie">
                 </div>
                 <div class="form-group">
-                <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria" name="selCategoria">
-                    <option selected>categoria</option>
-                    <option value="1">Pinzas</option>
-                    <option value="2">Martillos</option>
+                <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria" name="selCategoria" required>
+                  <option disabled selected value> -- Selecciona un tipo de herramienta --- </option>
+                  @foreach($tipos as $tipo)  
+                  <option value={{$tipo->id}}>{{$tipo->tipo}}</option>
+                  @endforeach
                   </select>
                 </div>
                 <button type="submit" class="btn btn-primary">Registrar herramienta</button>

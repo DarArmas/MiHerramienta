@@ -14,7 +14,12 @@ class CatalogoController extends Controller{
     public function index(Request $request){
 
         if($request->ajax()){
-            $herramientas = DB::select('SELECT * FROM catalogo');
+            $query = 'SELECT catalogo.id, catalogo.descripcion, catalogo.codigo, catalogo.numserie, tipo_herramienta.tipo' 
+                .' FROM catalogo' 
+                . ' INNER JOIN tipo_herramienta'
+                . ' ON catalogo.tipo = tipo_herramienta.id';
+
+            $herramientas = DB::select($query);
             
             return DataTables::of($herramientas)
                 ->addColumn('action', function($herramientas){
@@ -26,7 +31,8 @@ class CatalogoController extends Controller{
                 ->make(true);
         }
 
-        return view('catalogo.index');
+        $tipos_herramienta = DB::select('SELECT * FROM tipo_herramienta');
+        return view('catalogo.index')->with('tipos', $tipos_herramienta);
     }
     
     public function registrar(Request $request){
