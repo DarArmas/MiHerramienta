@@ -12,7 +12,7 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.2/datatables.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js" integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
- 
+    <link href="css/style.css"  rel="stylesheet"/>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -76,15 +76,30 @@
                     <label for="txtDescripcion">Descripcion</label>
                     <textarea class="form-control" id="txtDescripcion" name="txtDescripcion" rows="1" required></textarea>
                 </div>
-                <div class="form-group" data-tip="Que rollo">
-                  <label for="txtCodigo">Codigo</label> 
-                  <input type="number" class="form-control" id="txtCodigo" name="txtCodigo">
-                  <small style="color:red;">*El codigo es para agrupados</small>
-                </div>
                 <div class="form-group">
-                  <label for="txtSerie">Serie</label> 
-                  <input type="number" class="form-control" id="txtSerie" name="txtSerie">
-                  <small style="color:red;">*La serie es para objetos unicos</small>
+                <label for="">Que es esto aAaaaAAaaa</label>
+                  <div class="custom-control custom-radio">
+                    <input type="radio" id="rbAgrupado" name="rbAgrupacion" value="Agrupado" class="custom-control-input rb-agrupacion" required>
+                    <label class="custom-control-label" for="rbAgrupado">Agrupado</label>
+                  </div>
+                  <div class="custom-control custom-radio">
+                    <input type="radio" id="rbUnico" name="rbAgrupacion" value="Unico" class="custom-control-input rb-agrupacion">
+                    <label class="custom-control-label" for="rbUnico">Unico</label>
+                  </div>
+                </div>
+                <div id="div-codigo">
+                  <div class="form-group">
+                    <label for="txtCodigo">Codigo</label> 
+                    <input type="number" class="form-control" id="txtCodigo" name="txtCodigo">
+                    <small style="color:red;">*El codigo es para agrupados</small>
+                  </div>
+                </div>
+                <div id="div-serie">
+                  <div class="form-group">
+                    <label for="txtSerie">Serie</label> 
+                    <input type="number" class="form-control" id="txtSerie" name="txtSerie">
+                    <small style="color:red;">*La serie es para objetos unicos</small>
+                  </div>
                 </div>
                 <div class="form-group">
                 <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria" name="selCategoria" required>
@@ -294,6 +309,25 @@
             });
 
 </script>
+<script>
+
+$('.rb-agrupacion').prop('checked', false);
+
+$('input[type="radio"]').click(function(){
+        if($(this).attr("value")=="Agrupado"){
+            $("#div-codigo").show('slow');
+            $("#div-serie").hide('slow');
+        }else{
+          if($(this).attr("value")=="Unico"){
+            $("#div-serie").show('slow');
+            $("#div-codigo").hide('slow');
+        }
+        }
+                
+    });
+    
+            
+  </script>
     
 </body>
 </html>
