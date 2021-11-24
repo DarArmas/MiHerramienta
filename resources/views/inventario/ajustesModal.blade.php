@@ -107,7 +107,7 @@
 								<td>${faltante["fecha"]}</td>
 								<td>${faltante["solicitante"]}</td>
 								<td>${faltante["motivo"]}</td>
-								<td style="text-align:center; vertical-align: middle;"><button class="btn btn-success btn-sm link-recuperar" value="${faltante["id"]}" title="Recuperarla">
+								<td style="text-align:center;"><button class="btn btn-success btn-sm link-recuperar" value="${faltante["id"]}" title="Recuperarla">
 										<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
 										<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
 										<path d="M5 12l5 5l10 -10" />
@@ -215,7 +215,8 @@
 
 
 		$("#cerrar-ajustes").click(function(){
-			location.reload();
+			$('#tabla-inventario').DataTable().ajax.reload(null, false);
+			//location.reload();
         });
 
 		$("#btnConfirmarEliminacion").click(function(){

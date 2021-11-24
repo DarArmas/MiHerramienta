@@ -37,16 +37,9 @@ class tooltypeController extends Controller{
 
     public function registrar(Request $request){
 
-        $tipo = ucfirst($request->tipo);
-
-        $id_tipo = DB::table('tipo_herramienta')->insertGetId(
-            array(
-                'tipo' => $tipo,
-            )
-        );
+        $tipo = $request->tipo;
      
-        if(empty($id_tipo)) abort(500);
-
+        $tipos_herramienta = DB::select('INSERT INTO tipo_herramienta(tipo) VALUES("'.$tipo.'")');
         return back();
 
     }

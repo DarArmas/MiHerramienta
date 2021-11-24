@@ -57,7 +57,7 @@
 					<form method="post" id="formEntrega">   
                         <!-- @csrf -->
 						<div class="form-group">
-						<label>Fecha:</label>
+						<label>Fecha del regreso (Hoy):</label>
 							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y",time());?>" disabled >
 						</div>
 						<div class="form-group">
@@ -372,7 +372,8 @@
 				$('#tabla-entregados tbody').html('');
 				$('#formEntrega')[0].reset();
 				$('#btnConfirmarEntrega').prop('disabled', false);
-				location.reload();
+				//location.reload();
+				$('#tabla-inventario').DataTable().ajax.reload(null,false);
 			},2500);
 		}
 

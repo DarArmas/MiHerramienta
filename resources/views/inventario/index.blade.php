@@ -20,7 +20,7 @@
     </div>
     <div class="column">
       <button style="border: solid #000 1px" type="button" class="btn1 col-md-5 btn btn-warning btn-lg m-2" data-backdrop="static" data-toggle="modal" data-target="#llegadaModal">Llegada de Material</button>
-      <button style="border: solid #000 1px" type="button" class="btn1 col-md-5 btn btn-warning btn-lg m-2" data-backdrop="static" data-toggle="modal" data-target="#retiradaModal">Retiro de Material</button>
+      <button style="border: solid #000 1px" type="button" class="btn1 col-md-5 btn btn-warning btn-lg m-2" data-backdrop="static" data-toggle="modal" data-target="#retiradaModal">Realizar ajuste de inventario</button>
     </div>
   </div>
   <!--hacer_movimiento-->
@@ -36,7 +36,7 @@
 								<col span="1" style="width: 8%;">
 			</colgroup>
       <thead>
-      <td class="td-table">Codigo</td>
+      <td class="td-table">Codigo/SN</td>
         <td class="td-table">Descripcion</td>
         <td class="td-table">Total</td>
         <td class="td-table">Disponible</td>
@@ -52,7 +52,7 @@
           Ajustes de inventario
         </button>
         <div class="dropdown-menu" id="dropdown-ajustes" aria-labelledby="dropdownMenuButton">
-          <a class="dropdown-item" id="link-ajuste" data-backdrop="static" data-toggle="modal" data-target="#ajustesModal">Realizar ajuste</a>
+          <a class="dropdown-item" id="link-ajuste" data-backdrop="static" data-toggle="modal" data-target="#ajustesModal">Recuperar o perder herramientas</a>
           <a class="dropdown-item" class="link-descarga" id="link-perdidos" href="{{Route('inventario.exportFaltantes', ['accion'=> 'perdidos'])}}">Descargar historial de perdidos</a>
           <a class="dropdown-item" class="link-descarga" id="link-recuperados" href="{{Route('inventario.exportFaltantes', ['accion'=> 'recuperados'])}}">Descargar historial de recuperados</a>
         </div>

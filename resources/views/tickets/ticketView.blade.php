@@ -409,6 +409,8 @@
 
 				var td_cantidades = $('#tabla-seleccionados td:nth-child(4)');
 
+
+				//si ya todas las cantidades estn correctas
 				if(td_cantidades.length == selected.length){
 					
 

@@ -16,16 +16,14 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class CatalogoController extends Controller{
     public function index(Request $request){
         if($request->ajax()){
             $query = 'SELECT catalogo.id, catalogo.descripcion, catalogo.codigo, catalogo.numserie, tipo_herramienta.tipo' 
                 .' FROM catalogo' 
-                . ' LEFT OUTER JOIN tipo_herramienta'
-                . ' ON catalogo.tipo = tipo_herramienta.id'
-                . ' WHERE catalogo.activo = 1';
+                . ' INNER JOIN tipo_herramienta'
+                . ' ON catalogo.tipo = tipo_herramienta.id';
 
 
             $herramientas = DB::select($query);
@@ -35,13 +33,7 @@ class CatalogoController extends Controller{
                     $acciones = '<a href="javascript:void(0)" onclick="editarHerramienta('. $herramientas->id .')" class="btn btn-info btn-sm">Editar</a>';
                     $acciones .= '&nbsp;&nbsp;&nbsp;<button type="button" name="delete" id="'. $herramientas->id .'" class="delete btn btn-danger btn-sm">Eliminar</button>';
                     // $acciones .= '&nbsp;&nbsp;&nbsp;<button type="button" value="'. $herramientas->id .'" class="btn btn-success btn-sm descargar-kardex">s</button>';
-                    $acciones .= '&nbsp;&nbsp;&nbsp;<a href="'.route('catalogo.export', ['id'=> $herramientas->id]).'" class="btn btn-success btn-sm descargar-kardex" title="Descargar todos los movimientos de esta herramienta"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-download" width="16" height="16" viewBox="2 0 21 21" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                    <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                    <line x1="12" y1="11" x2="12" y2="17" />
-                    <polyline points="9 14 12 17 15 14" />
-                  </svg></a>';
+                    $acciones .= '&nbsp;&nbsp;&nbsp;<a href="'.route('catalogo.export', ['id'=> $herramientas->id]).'" class="btn btn-success btn-sm descargar-kardex">s</a>';
                      //$acciones .= '&nbsp;&nbsp;&nbsp;<a href="<?=php echo route("catalogo.export")" class="btn btn-success btn-sm descargar-kardex">s</a>';
                     return $acciones; 
                 })
@@ -58,104 +50,31 @@ class CatalogoController extends Controller{
     
     public function registrar(Request $request){
 
-        $descripcion = ucfirst($request->descripcion);
+        $descripcion = $request->descripcion;
         $codigo = $request->codigo;
         $numserie = $request->numserie;
-        $tipo = $request->tipo == 'null' ? null : $request->tipo;
-        
+        $tipo = $request->tipo;
 
         //codigo o serie estara vacio, por eso cambia el query
         if(empty($numserie)){
-            $id_mov = DB::table('catalogo')->insertGetId(
-                array(
-                    'descripcion' => $descripcion,
-                    'codigo' => $codigo,
-                    'tipo' => $tipo,
-                )
-            );
-        
-            if(empty($id_mov)) abort(500);  
+            $query= 'INSERT INTO catalogo(descripcion, codigo, tipo)'
+                    .'VALUES("'.$descripcion.'","'.$codigo.'","'.$tipo.'")';
+                
         }
 
         if(empty($codigo)){
-              $id_mov = DB::table('catalogo')->insertGetId(
-                array(
-                    'descripcion' => $descripcion,
-                    'numserie' => $numserie,
-                    'tipo' => $tipo,
-                )
-            );
-        
-            if(empty($id_mov)) abort(500);
-
+            $query= 'INSERT INTO catalogo(descripcion, numserie, tipo)'
+                    .'VALUES("'.$descripcion.'","'.$numserie.'","'.$tipo.'")';
+                
         }
      
-        //$herramienta = DB::select($query);
+        $herramienta = DB::select($query);
         return back();
 
     }
 
-    public function eliminar(Request $request){
-        $id = $request->id;
-        $motivo = ucfirst($request->motivo);
-
-        $result_inventario = DB::table('inventarioutl')
-                    ->select('qtyc')
-                    ->where('herramienta', '=', $id)
-                    ->get();
-        if(count($result_inventario)  > 0) $prestadas = $result_inventario[0]->qtyc;
-        
-        if($prestadas > 0){
-        return response()->json(['success'=> false, 'cantidad'=>$prestadas]);
-            //return 'Hay '. $prestadas.' articulos de este tipo en prestamos';
-        }
-
-
-        //$herramienta = DB::select('DELETE FROM catalogo WHERE id = '. $id);
-        $result1 = DB::table('catalogo')
-             ->where('id', $id)
-             ->update(['activo' => 0]);
-
-         if($result1 == false) abort(500);       
-
-        $id_mov = DB::table('kardex')->insertGetId(
-                array(
-                    'movimiento' => 4,
-                    'descripcion' => $motivo,
-                    'estado' => null
-                )
-            );
-
-        if(empty($id_mov)){
-            //no se pudo crear el registro de baja en kardex, entonces regresa la herramienta a activa
-            DB::table('catalogo')
-            ->where('id', $id)
-            ->update(['activo' => 1]);
-
-            abort(500);
-        } 
-
-        $result2 = DB::table('kardex_detalle')->insertGetId(
-            array(
-                'id_kardex' => $id_mov,
-                'id_herramienta' => $id,
-            )
-        );
-         
-        if($result2 == false){
-            //si no se pudo hacer el detalle del movimiento, elimina el movimiento y regresa el estado de la herramienta a activo
-            DB::table("kardex")
-                ->orderBy("id", "desc")
-                ->take(1)
-                ->delete();
-
-            DB::table('catalogo')
-                ->where('id', $id)
-                ->update(['activo' => 1]);
-
-            abort(500);
-        } 
-
+    public function eliminar($id){
+        $herramienta = DB::select('DELETE FROM catalogo WHERE id = '. $id);
         return back();
 
     }
@@ -169,32 +88,31 @@ class CatalogoController extends Controller{
     public function actualizar(Request $request){
         
         $id = $request->id;
-        $descripcion = ucfirst($request->descripcion);
-        $tipo = $request->tipo == 'null' ? null : $request->tipo;
+        $descripcion = $request->descripcion;
+        $codigo = $request->codigo;
+        $serie = $request->numserie;
+        $tipo = $request->tipo;
 
-         if(!empty($id) && !empty($descripcion)){
-            $resultUpdate = DB::table('catalogo')
-             ->where('id', $id)
-             ->update(['descripcion' => $descripcion,'tipo' => $tipo]);
-         }
+         //ASI NO FUNCIONA -> $serie = !empty($request->numserie) ? $request->numserie : NULL; 
 
-         if($resultUpdate == true){
-            return back();
-        }else{
-            abort(500);
+        if(empty($codigo)){
+            $query = 'UPDATE catalogo SET '
+            .'descripcion="'.$descripcion.'",'
+            .'numserie="'. $serie .'",'
+            .'tipo="'. $tipo . '"'
+            .' WHERE id='.$id;  
         }
 
-    }
+        if(empty($serie)){
+            $query = 'UPDATE catalogo SET '
+            .'descripcion="'.$descripcion.'",'
+            .'codigo="'. $codigo .'",'
+            .'tipo="'. $tipo . '"'
+            .' WHERE id='.$id;
+        }
 
-    public function fetchCategorias(){
-
-        //$query = DB::select('SELECT * FROM tipo_herramienta');
-        $result = DB::table('tipo_herramienta')
-                ->select('*')
-                ->get();
-
-        return $result;
-
+        $herramienta = DB::select($query);
+        return back();
     }
 
     public function exportKardex($id){
@@ -269,25 +187,12 @@ class CatalogoController extends Controller{
         $hojaActiva = $excel->getActiveSheet();
         $hojaActiva->setTitle("Kardex");
 
-        //PONER IMAGEN------------------------------------------------------------------------------------------------------------------
-        $hojaActiva->getRowDimension('1')->setRowHeight(47);
-        $drawing = new Drawing();
-        $drawing->setName('UTLD logo');
-        $drawing->setPath('.\images\utld-logo.png');
-        $drawing->setCoordinates('A1');
-        $drawing->setOffsetX(20);
-        $drawing->setOffsetY(10);
-        $drawing->setHeight(45);
-        $drawing->getShadow()->setVisible(true);
-        $drawing->getShadow()->setDirection(45);
-        $drawing->setWorksheet($excel->getActiveSheet());
-        //------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //PONER FECHA
         $fecha = date("d-m-Y", time());
-        $hojaActiva->setCellValue('B1', "ESTE REPORTE SE GENERÓ EL: ". $fecha);
-        $hojaActiva->mergeCells('B1:D1');
-        $hojaActiva->getStyle('B1:D1')->getFont()->setSize(15);
+        $hojaActiva->setCellValue('A1', "ESTE REPORTE SE GENERÓ EL: ". $fecha);
+        $hojaActiva->mergeCells('A1:C1');
+        $hojaActiva->getStyle('A1:C1')->getFont()->setSize(15);
 
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -316,7 +221,7 @@ class CatalogoController extends Controller{
         $hojaActiva->setCellValue('D3', "Fecha del Movimiento");
 
         $hojaActiva->getColumnDimension('E')->setWidth(25);
-        $hojaActiva->setCellValue('E3', "Cantidad");
+        $hojaActiva->setCellValue('E3', "Cantidad en Préstamo");
 
         $hojaActiva->getColumnDimension('F')->setWidth(25);
         $hojaActiva->setCellValue('F3', "Tipo de Entrada");

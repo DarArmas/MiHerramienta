@@ -128,7 +128,7 @@ class InventarioController extends Controller{
     public function hacerPrestamo(Request $request){
          $herramientas = $request->selected_list;
          $solicitante = $request->solicitante;
-         $comentario = $request->comentario == "" ? 'Préstamo ordinario' : $request->comentario;
+         $comentario = $request->comentario == "" ? 'Sin comentario' : $request->comentario;
          $ticket = isset($request->ticket) ? $request->ticket : null; 
          
 
@@ -140,6 +140,7 @@ class InventarioController extends Controller{
                 'solicitante' => $solicitante,
                 'idticket' => $ticket,
                 'estado' => 1,
+           
             )
         );
     
@@ -149,7 +150,7 @@ class InventarioController extends Controller{
          foreach($herramientas as $herramienta){
             $id_kardexD = '';
             $codigo = $herramienta['codigo'];
-            $query = 'SELECT id FROM catalogo WHERE numserie = "'. $codigo .'" OR codigo = "'. $codigo.'"';
+            $query = 'SELECT id FROM catalogo WHERE numserie = '. $codigo .' OR codigo = '. $codigo;
             $result = DB::select($query);
 
 
@@ -182,39 +183,25 @@ class InventarioController extends Controller{
 
     public function insertFaltantes(Request $request){
         $herramientas = $request->faltantes;
-        $motivo = ucfirst($request->motivo);
+        $motivo = $request->motivo;
         $id_mov = $request->id;
-        $estado = 1;
 
 
         foreach($herramientas as $herramienta){
 
             $codigo = $herramienta['codigo'];
             $cantidad = $herramienta['cantidad'];
+            $estado = 1;
 
-            $result = DB::table('catalogo')
-                        ->select('id')
-                        ->where('codigo', '=', $codigo)
-                        ->orWhere('numserie', '=', $codigo)
-                        ->get();
 
-             if(count($result) > 0){
-                $id = $result[0]->id;
-
-                $insert_faltante = DB::table('faltantes')->insertGetId([
-                    'id_herramienta' => $id,
-                    'motivo' => $motivo,
-                    'cantidad' => $cantidad,
-                    'id_mov' => $id_mov,
-                    'estado' => 1
-                ]);
-                
-                if(empty($insert_faltante)) abort(500);
-                   
-            }
+            $query = 'INSERT INTO faltantes (id_herramienta, motivo,cantidad, id_mov, estado) VALUES' 
+                    .' ((SELECT id FROM catalogo WHERE codigo = '.$codigo.' OR numserie = '.$codigo.'), "'.$motivo.'" ,'. $cantidad.','.$id_mov.','.$estado.')';
+            $result = DB::select($query);
         }
 
         return "Se guardó el registro de pérdida";
+
+
     }
 
 
@@ -370,15 +357,14 @@ class InventarioController extends Controller{
         $herramientas = $request->entregadas_lista;
         $solicitante = $request->solicitante;
         $id_kardex_prestamo = $request->id; //se necesita el id del prestamo para cambiar el estado a 0
-        
+        //$comentario = $request->comentario == "" ? 'Sin comentario' : $request->comentario;
        
        //crear movimiento en kardex y obtener su id
         $id_mov = DB::table('kardex')->insertGetId(
            array(
                'movimiento' => 2,
                'solicitante' => $solicitante,
-               'estado' => NULL,
-               'descripcion' => 'Regreso ordinario'
+               'estado' => NULL
            )
        );
    
@@ -389,12 +375,8 @@ class InventarioController extends Controller{
         foreach($herramientas as $herramienta){
            $id_kardexD = '';
            $codigo = $herramienta['codigo'];
-
-           $result = DB::table('catalogo')
-           ->select('id')
-           ->where('codigo', '=', $codigo)
-           ->orWhere('numserie', '=', $codigo)
-           ->get();
+           $query = 'SELECT id FROM catalogo WHERE numserie = '. $codigo .' OR codigo = '. $codigo;
+           $result = DB::select($query);
 
             if(count($result) > 0){
                $id = $result[0]->id;
@@ -487,7 +469,7 @@ class InventarioController extends Controller{
                 $descripcion_mov = "Regreso tardío";
             }else if($accion == "eliminar"){
                 $estado = 2;
-                $tipo_mov = 5;
+                $tipo_mov = 4;
                 $descripcion_mov = "Robo o extravío";
             }
             
@@ -823,7 +805,7 @@ class InventarioController extends Controller{
          $drawing = new Drawing();
          $drawing->setName('UTLD logo');
          $drawing->setPath('.\images\utld-logo.png');
-         $drawing->setCoordinates('A1');
+         $drawing->setCoordinates('D1');
          $drawing->setOffsetX(150);
          $drawing->setOffsetY(10);
          $drawing->setHeight(45);
@@ -836,9 +818,9 @@ class InventarioController extends Controller{
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------
         //PONER FECHA
         $fecha = date("d-m-Y", time());
-        $hojaActiva->setCellValue('B1', "ESTE REPORTE SE GENERÓ EL: ". $fecha);
-        $hojaActiva->mergeCells('B1:D1');
-        $hojaActiva->getStyle('B1:D1')->getFont()->setSize(15);
+        $hojaActiva->setCellValue('A1', "ESTE REPORTE SE GENERÓ EL: ". $fecha);
+        $hojaActiva->mergeCells('A1:C1');
+        $hojaActiva->getStyle('A1:C1')->getFont()->setSize(15);
 
         //------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

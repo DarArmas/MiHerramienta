@@ -16,7 +16,7 @@
 					<form method="post" id="sample_form">   
                         <!-- @csrf -->
 						<div class="form-group">
-						<label>Fecha:</label>
+						<label>Fecha del préstamo (Hoy):</label>
 							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y",time());?>" disabled >
 						</div>
 						<div class="form-group">
@@ -25,7 +25,7 @@
 						</div>
 						<div class="form-group">
 							<label>Comentario:</label>
-							<textarea name="comentario" id="comentarioTxt" class="form-control" rows="2" placeholder="Sin comentario (predeterminado)" title="Ej. las pinzas ya estaban rotas al momento del préstamo"></textarea>
+							<textarea name="comentario" id="comentarioTxt" class="form-control" rows="2" placeholder="Préstamo ordinario (predeterminado)" title="Ej. las pinzas ya estaban rotas al momento del préstamo"></textarea>
 							<small style="color: rgb(122, 122, 122)">*Opcional</small>
 						</div>
 
@@ -103,8 +103,6 @@
 						</div>
 				</div>
 			</div>
-
-
 			<br />
 			<br />
 			<br />
@@ -174,7 +172,8 @@
 					</div>
 				</div>
 			</div><!--modal advertencia ticket-->
-
+ 	
+			
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
@@ -192,32 +191,32 @@ $(document).ready(function(){
 	$('#herramienta_select').prop("placeholder", "Busca por descripcion o codigo/serie"); //select se convierte en input text al cargar editableSelect() 
 	$(document).tooltip();
 
-	const href = window.location.search;
-	const urlParams = new URLSearchParams(href);
-	const ticket = urlParams.get('ticket')
+	// const href = window.location.search;
+	// const urlParams = new URLSearchParams(href);
+	// const ticket = urlParams.get('ticket')
+
 	//si recibo un id de ticket, cargar modal automaticamente
-	if(ticket !== null){
-		$("#prestamoModal").modal('show');
-		$(".elementos-opcionales").css('display', 'none');
+	// if(ticket !== null){
+	// 	$("#prestamoModal").modal('show');
+	// 	$(".elementos-opcionales").css('display', 'none');
 
-		$('<th>Max</th>').insertBefore('#th-qty');
+	// 	$('<th>Max</th>').insertBefore('#th-qty');
 		
-		$.ajax({
-			url:"inventario/getTicket/"+ticket,
-			method:"GET",
-			error: function(data) {
-			toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
-			return false;
-			},
-			success:function(data)
-			{
-				mostrarHerramientas(data);
-			},
-		});
+	// 	$.ajax({
+	// 		url:"inventario/getTicket/"+ticket,
+	// 		method:"GET",
+	// 		error: function(data) {
+	// 		toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
+	// 		return false;
+	// 		},
+	// 		success:function(data)
+	// 		{
+	// 			mostrarHerramientas(data);
+	// 		},
+	// 	});
 
-	}
+	//}
 
-	
 
 
 	function listarHerramientas(selected){
@@ -291,7 +290,7 @@ $(document).ready(function(){
 						$('#sample_form')[0].reset();
 						$("#prestamoModal").modal('hide');
 						$('#btnConfirmPrestamo').prop('disabled', false);
-						location.reload();
+						$('#tabla-inventario').DataTable().ajax.reload(null, false);
 					},2500);
 						
 				},
@@ -381,161 +380,161 @@ $(document).ready(function(){
 	}
 
 	//funcion agregar herramientas si viene desde un ticket
-	function mostrarHerramientas(herramientas){
+	// function mostrarHerramientas(herramientas){
 		
-		herramientas.forEach(herramienta => {
-			var codigo = '';
-			var id = herramienta.herramienta;
-			var descripcion = herramienta.descripcion.charAt(0).toUpperCase() + herramienta.descripcion.slice(1);
-			var cantidad = herramienta.qty_peticion;
+	// 	herramientas.forEach(herramienta => {
+	// 		var codigo = '';
+	// 		var id = herramienta.herramienta;
+	// 		var descripcion = herramienta.descripcion.charAt(0).toUpperCase() + herramienta.descripcion.slice(1);
+	// 		var cantidad = herramienta.qty_peticion;
 
-			if(herramienta.codigo == null){
-			codigo = herramienta.numserie;
-			}else{
-			codigo = herramienta.codigo;
-			}
+	// 		if(herramienta.codigo == null){
+	// 		codigo = herramienta.numserie;
+	// 		}else{
+	// 		codigo = herramienta.codigo;
+	// 		}
 
-			$.ajax({
-				url:"inventario/getTool/"+codigo,
-				method:"GET",
-				error: function(data) {
-					toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
-					return false;
-				},
-				success:function(data)
-				{
-					var row = '';
-					if(data !== null){
-						var herramientaDB = JSON.parse(data);
-						verifyQty(herramientaDB, codigo, id, descripcion, cantidad);
+	// 		$.ajax({
+	// 			url:"inventario/getTool/"+codigo,
+	// 			method:"GET",
+	// 			error: function(data) {
+	// 				toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
+	// 				return false;
+	// 			},
+	// 			success:function(data)
+	// 			{
+	// 				var row = '';
+	// 				if(data !== null){
+	// 					var herramientaDB = JSON.parse(data);
+	// 					verifyQty(herramientaDB, codigo, id, descripcion, cantidad);
 
-					}
+	// 				}
 
-				},
-			});
+	// 			},
+	// 		});
 			
-		});
-	}// funcion mostrarHerramientas
+	// 	});
+	// }// funcion mostrarHerramientas
 
 
-	function verifyQty(herramientaDB, codigo, id, descripcion, cantidad){
-		var row = '';     
+	// function verifyQty(herramientaDB, codigo, id, descripcion, cantidad){
+	// 	var row = '';     
 
-				if(herramientaDB.descripcion !== descripcion || herramientaDB.id !== id){
-					toastr.error('Alguna herramienta no existe', 'Error', {timeOut: 3000});
-					return false;	
-				}else if(parseInt(cantidad) <= parseInt(herramientaDB.qtyf)){
+	// 			if(herramientaDB.descripcion !== descripcion || herramientaDB.id !== id){
+	// 				toastr.error('Alguna herramienta no existe', 'Error', {timeOut: 3000});
+	// 				return false;	
+	// 			}else if(parseInt(cantidad) <= parseInt(herramientaDB.qtyf)){
 
-					row += `<tr>
-									<td class="herramientaIDCell style-td">${codigo}</td>
-									<td>${descripcion}</td>
-									<td>${herramientaDB.qtyf}</td>
-									<td class="qty-ok qty"><a href="#" class="increment desc">-</a>${cantidad}<a href="#" class="increment asc">+</a></td>
-									<td><a type="button" name="delete" class="btn btn-danger btn-xs delete">
-										<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash"  width="20" height="20" viewBox="2 0 20 20"" stroke-width="2.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
-										<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-										<line x1="4" y1="7" x2="20" y2="7" />
-										<line x1="10" y1="11" x2="10" y2="17" />
-										<line x1="14" y1="11" x2="14" y2="17" />
-										<path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-										<path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
-										</svg>
-									</a>
-									</td>
-								</tr>`;
+	// 				row += `<tr>
+	// 								<td class="herramientaIDCell style-td">${codigo}</td>
+	// 								<td>${descripcion}</td>
+	// 								<td>${herramientaDB.qtyf}</td>
+	// 								<td class="qty-ok qty"><a href="#" class="increment desc">-</a>${cantidad}<a href="#" class="increment asc">+</a></td>
+	// 								<td><a type="button" name="delete" class="btn btn-danger btn-xs delete">
+	// 									<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash"  width="20" height="20" viewBox="2 0 20 20"" stroke-width="2.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	// 									<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+	// 									<line x1="4" y1="7" x2="20" y2="7" />
+	// 									<line x1="10" y1="11" x2="10" y2="17" />
+	// 									<line x1="14" y1="11" x2="14" y2="17" />
+	// 									<path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+	// 									<path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+	// 									</svg>
+	// 								</a>
+	// 								</td>
+	// 							</tr>`;
 
 							
 					
-				}else{
-					row += `<tr>
-									<td class="herramientaIDCell style-td">${codigo}</td>
-									<td>${descripcion}</td>
-									<td>${herramientaDB.qtyf}</td>
-									<td class="qty-error qty"><a href="#" class="increment desc">-</a>${cantidad}<a href="#" class="increment asc">+</a></td>
-									<td><a type="button" name="delete" class="btn btn-danger btn-xs delete">
-										<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash"  width="20" height="20" viewBox="2 0 20 20"" stroke-width="2.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
-										<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-										<line x1="4" y1="7" x2="20" y2="7" />
-										<line x1="10" y1="11" x2="10" y2="17" />
-										<line x1="14" y1="11" x2="14" y2="17" />
-										<path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
-										<path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
-										</svg>
-									</a>
-									</td>
-								</tr>`;
-				}	
+	// 			}else{
+	// 				row += `<tr>
+	// 								<td class="herramientaIDCell style-td">${codigo}</td>
+	// 								<td>${descripcion}</td>
+	// 								<td>${herramientaDB.qtyf}</td>
+	// 								<td class="qty-error qty"><a href="#" class="increment desc">-</a>${cantidad}<a href="#" class="increment asc">+</a></td>
+	// 								<td><a type="button" name="delete" class="btn btn-danger btn-xs delete">
+	// 									<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash"  width="20" height="20" viewBox="2 0 20 20"" stroke-width="2.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+	// 									<path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+	// 									<line x1="4" y1="7" x2="20" y2="7" />
+	// 									<line x1="10" y1="11" x2="10" y2="17" />
+	// 									<line x1="14" y1="11" x2="14" y2="17" />
+	// 									<path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+	// 									<path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+	// 									</svg>
+	// 								</a>
+	// 								</td>
+	// 							</tr>`;
+	// 			}	
 
 				
 
-				selected.push({
-					codigo: codigo,
-					descripcion: descripcion,
-					cantidad: cantidad
-				});
+	// 			selected.push({
+	// 				codigo: codigo,
+	// 				descripcion: descripcion,
+	// 				cantidad: cantidad
+	// 			});
 
-				$('#tabla-seleccionados').append(row);
+	// 			$('#tabla-seleccionados').append(row);
 
-	}
+	// }
 
 
-	$("tbody").on('DOMSubtreeModified', function() {
-					//va estrictamente aqui, no en document.ready porque al momento de que el archivo está listo, los elementos <a class=".incrementador"> aun no estan cargados
-			$('.asc').on('click', function(e){
-				//++ a la canitdad solicitada
-				e.stopPropagation(e);
-				e.stopImmediatePropagation(e);
+	// $("tbody").on('DOMSubtreeModified', function() {
+	// 				//va estrictamente aqui, no en document.ready porque al momento de que el archivo está listo, los elementos <a class=".incrementador"> aun no estan cargados
+	// 		$('.asc').on('click', function(e){
+	// 			//++ a la canitdad solicitada
+	// 			e.stopPropagation(e);
+	// 			e.stopImmediatePropagation(e);
 
-				var tr_qty = $(this).closest('tr');
-				if(tr_qty != "" && typeof tr_qty == "object"){
-					var max = (tr_qty.find("td").eq(2)[0].innerHTML);
-					var qty = (tr_qty.find("td").eq(3)[0].innerHTML);
-					var qty_requested = qty.split('<a href="#" class="increment asc">')[0].substring(40);
-					var qty_new = (parseInt(qty_requested))+1;
-					var td_new = (tr_qty.find("td").eq(3)[0]);
+	// 			var tr_qty = $(this).closest('tr');
+	// 			if(tr_qty != "" && typeof tr_qty == "object"){
+	// 				var max = (tr_qty.find("td").eq(2)[0].innerHTML);
+	// 				var qty = (tr_qty.find("td").eq(3)[0].innerHTML);
+	// 				var qty_requested = qty.split('<a href="#" class="increment asc">')[0].substring(40);
+	// 				var qty_new = (parseInt(qty_requested))+1;
+	// 				var td_new = (tr_qty.find("td").eq(3)[0]);
 
-					if(parseInt(qty_new) > parseInt(max)){
-						td_new.classList.remove("qty-ok");
-						td_new.classList.add("qty-error");
-					}
+	// 				if(parseInt(qty_new) > parseInt(max)){
+	// 					td_new.classList.remove("qty-ok");
+	// 					td_new.classList.add("qty-error");
+	// 				}
 					
-					var td_new_txt =`<a href="#" class="increment desc">-</a>${qty_new}<a href="#" class="increment asc">+</a>`
-					td_new.innerHTML = (td_new_txt);
+	// 				var td_new_txt =`<a href="#" class="increment desc">-</a>${qty_new}<a href="#" class="increment asc">+</a>`
+	// 				td_new.innerHTML = (td_new_txt);
 
-				}			
-			})
+	// 			}			
+	// 		})
 				
 			
 
-			$('.desc').on('click', function(e){
-				//-- a la cantidad solicitada
-				e.stopPropagation();
-				e.stopImmediatePropagation();
+	// 		$('.desc').on('click', function(e){
+	// 			//-- a la cantidad solicitada
+	// 			e.stopPropagation();
+	// 			e.stopImmediatePropagation();
 
-				var tr_qty = $(this).closest('tr');
-				if(tr_qty != "" && typeof tr_qty == "object"){
-					var max = (tr_qty.find("td").eq(2)[0].innerHTML);
-					var qty = (tr_qty.find("td").eq(3)[0].innerHTML);
-					var qty_requested = qty.split('<a href="#" class="increment asc">')[0].substring(40);
-					if(parseInt(qty_requested) > 1){
-						var qty_new = (parseInt(qty_requested))-1;
-						var td_new = (tr_qty.find("td").eq(3)[0]);
+	// 			var tr_qty = $(this).closest('tr');
+	// 			if(tr_qty != "" && typeof tr_qty == "object"){
+	// 				var max = (tr_qty.find("td").eq(2)[0].innerHTML);
+	// 				var qty = (tr_qty.find("td").eq(3)[0].innerHTML);
+	// 				var qty_requested = qty.split('<a href="#" class="increment asc">')[0].substring(40);
+	// 				if(parseInt(qty_requested) > 1){
+	// 					var qty_new = (parseInt(qty_requested))-1;
+	// 					var td_new = (tr_qty.find("td").eq(3)[0]);
 
-						if((parseInt(qty_new) <= parseInt(max)) && td_new.classList.contains("qty-error")){
-							td_new.classList.remove("qty-error");
-							td_new.classList.add("qty-ok");
-						}
+	// 					if((parseInt(qty_new) <= parseInt(max)) && td_new.classList.contains("qty-error")){
+	// 						td_new.classList.remove("qty-error");
+	// 						td_new.classList.add("qty-ok");
+	// 					}
 
-						var td_new_txt =`<a href="#" class="increment desc">-</a>${qty_new}<a href="#" class="increment asc">+</a>`
-						td_new.innerHTML = (td_new_txt);
-						console.log(qty_new);
-					}else{
-						toastr.error('No puedes elegir menos de 1 unidad', 'Error', {timeOut: 3000});
-					}
+	// 					var td_new_txt =`<a href="#" class="increment desc">-</a>${qty_new}<a href="#" class="increment asc">+</a>`
+	// 					td_new.innerHTML = (td_new_txt);
+	// 					console.log(qty_new);
+	// 				}else{
+	// 					toastr.error('No puedes elegir menos de 1 unidad', 'Error', {timeOut: 3000});
+	// 				}
 				
-				}			
-			})
-	 });
+	// 			}			
+	// 		})
+	//  });
 
 
 
@@ -565,12 +564,15 @@ $(document).ready(function(){
 
 	//submit - agregar herramienta a la lista
 	$('#sample_form').on('submit', function(e){
-		e.preventDefault();
-		/*guardar ids de herramientas selccionadas para despues comprobar antes de añadir
+			/*guardar ids de herramientas selccionadas para despues comprobar antes de añadir
 			un nuevo row a la tabla con una herramienta repetida (esta es una comprobacion que ya no es necesaria gracias a que una vez que
 			se agrega la herramienta, se deshabilita su opcion en el select)
 			se deja en caso de que falle la hoja de estilos
 		*/
+		e.preventDefault();
+		$('#save').prop('disabled', true);
+		setTimeout(()=>{$('#save').prop('disabled', false)}, 200);
+
 
 		var id_seleccionados = [];
 		var opciones = [];
@@ -648,80 +650,37 @@ $(document).ready(function(){
 //botn hacer el prestamo
 	$('#btnPrestamo').click(function(){
 		let resumen = '';
-		let lista_exceso = '';
-		let excesivos = [];
+		
+		if(selected.length > 0){
 
-		 var elementos_error = $('.qty-error');
-		 if(elementos_error.length !== 0){
+			if($('#solicitanteTxt').val() == ''){
+			$("#solicitanteTxt").effect("shake");
+			toastr.warning('Indica el solicitante', 'Falta el solicitante', {timeOut: 3000});
+			return false;
+			}
 
-			elementos_error.each(function(){
-				var herramienta_exceso = $(this).closest('tr').find("td").eq(1)[0].innerHTML;
-				lista_exceso += `
-						<li><strong>${herramienta_exceso}</strong></li>
-						`;
-
+			selected.forEach(herramienta => {
+			resumen += `
+					<li><strong>${herramienta["descripcion"]}</strong> - #${herramienta["codigo"]} (${herramienta["cantidad"]})</li>
+					`;
 			});
 
-			$("#exceso_ul").html(lista_exceso);
+			$("#resumen-list").html(resumen);
 
+			$('#btnConfirmPrestamo').text('Confirmar');
 			var backdropHeight = window.screen.height;
 			$('#backdrop').css('height', backdropHeight);
 			$('#backdrop').fadeIn(100);
 
-				$("#ticket-warning").show(); //no funciona con efectos
-				$("#ticket-warning").css('opacity', '1');
+			$("#confirmPrestamo").show(); //no funciona con efectos
+			$("#confirmPrestamo").css('opacity', '1');
+		
 
-
-			
-		 }else{
-			if(ticket !== null){
-
-				var cantidades = [];
-
-				var td_cantidades = $('#tabla-seleccionados td:nth-child(4)');
-
-				if(td_cantidades.length == selected.length){
-					
-
-					for(let i=0; i<selected.length; i++){
-						var qty = td_cantidades[i].innerHTML.split('<a href="#" class="increment asc">')[0].substring(40);
-						selected[i].cantidad = qty;
-					}
-
-				}
-			}
-
-
-			if(selected.length > 0){
-
-				if($('#solicitanteTxt').val() == ''){
-				$("#solicitanteTxt").effect("shake");
-				toastr.warning('Indica el solicitante', 'Falta el solicitante', {timeOut: 3000});
-				return false;
-				}
-
-				selected.forEach(herramienta => {
-				resumen += `
-						<li><strong>${herramienta["descripcion"]}</strong> - #${herramienta["codigo"]} (${herramienta["cantidad"]})</li>
-						`;
-				});
-
-				$("#resumen-list").html(resumen);
-
-				$('#btnConfirmPrestamo').text('Confirmar');
-				var backdropHeight = window.screen.height;
-				$('#backdrop').css('height', backdropHeight);
-				$('#backdrop').fadeIn(100);
-
-				$("#confirmPrestamo").show(); //no funciona con efectos
-				$("#confirmPrestamo").css('opacity', '1');
-			
-
-			}else{
-				toastr.error('Agrega al menos una herramienta', 'La tabla está vacia', {timeOut: 3000});
-				return false;
-			}
-		 }
+		}else{
+			toastr.error('Agrega al menos una herramienta', 'La tabla está vacia', {timeOut: 3000});
+			return false;
+		}
+		 
 	});
 
 	$('#closemodalR').click(function(){

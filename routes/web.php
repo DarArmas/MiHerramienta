@@ -28,9 +28,11 @@ Auth::routes();
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('catalogo', [CatalogoController::class, 'index'])->name('catalogo.index');
 Route::post('catalogo/registrar', [CatalogoController::class, 'registrar'])->name('catalogo.registrar');
-Route::get('catalogo/eliminar/{id}', [CatalogoController::class, 'eliminar'])->name('catalogo.eliminar');
+//Route::get('catalogo/eliminar/{id}', [CatalogoController::class, 'eliminar'])->name('catalogo.eliminar');
+Route::post('catalogo/eliminar', [CatalogoController::class, 'eliminar'])->name('catalogo.eliminar'); 
 Route::get('catalogo/editar/{id}', [CatalogoController::class, 'editar'])->name('catalogo.editar');
 Route::post('catalogo/actualizar', [CatalogoController::class, 'actualizar'])->name('catalogo.actualizar');
+Route::get('catalogo/fetchCategorias', [CatalogoController::class, 'fetchCategorias'])->name('catalogo.fetchCategorias');
 Route::get('catalogo/export/{id}', [CatalogoController::class, 'exportKardex'])->name('catalogo.export');
 
 // Rutas  de tipo_herramienta

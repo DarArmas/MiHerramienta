@@ -11,10 +11,17 @@ body{
     background: var(--backgroundColor);
 }
 
+td{
+    /*text-align: center <--- varía, por eso no se deja como regla de etiqueta*/
+    vertical-align: middle !important;
+}
+
 .td-table {
     background-color: var(--tableBackground)!important;
     color: var(--tableFontColor)!important;
 }
+
+
 
 .nav-theme{
     background-color: var(--tableBodyFontColor);
@@ -199,6 +206,9 @@ thead .td-table {
         display: inline;
         text-align: center;
       }
+
+
+
 
 
       

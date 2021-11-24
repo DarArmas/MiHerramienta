@@ -95,22 +95,7 @@ class CatalogoController extends Controller{
 
     }
 
-    public function eliminar(Request $request){
-        $id = $request->id;
-        $motivo = ucfirst($request->motivo);
-
-        $result_inventario = DB::table('inventarioutl')
-                    ->select('qtyc')
-                    ->where('herramienta', '=', $id)
-                    ->get();
-        if(count($result_inventario)  > 0) $prestadas = $result_inventario[0]->qtyc;
-        
-        if($prestadas > 0){
-        return response()->json(['success'=> false, 'cantidad'=>$prestadas]);
-            //return 'Hay '. $prestadas.' articulos de este tipo en prestamos';
-        }
-
-
+    public function eliminar($id){
         //$herramienta = DB::select('DELETE FROM catalogo WHERE id = '. $id);
         $result1 = DB::table('catalogo')
              ->where('id', $id)
@@ -121,8 +106,7 @@ class CatalogoController extends Controller{
         $id_mov = DB::table('kardex')->insertGetId(
                 array(
                     'movimiento' => 4,
-                    'descripcion' => $motivo,
-                    'estado' => null
+                    'descripcion' => 'Baja de herramienta',
                 )
             );
 

@@ -2,7 +2,6 @@
 @section('contenido')
 
 <div class="container mt-4">
-<h3 class="text-center" style="padding-bottom:5px">CATALOGO</h3>
   <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item">
       <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home"
@@ -16,8 +15,22 @@
   <br>
   <div class="tab-content" id="myTabContent">
     <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
-    <table id="tabla-catalogo" class="cell-border hover table table-dark" style="width:100%;">
-    <colgroup>
+
+    <!-- <label>Herramienta:</label>
+    <select name="tool" id="tool">
+
+        <option value="1">Martillo</option>
+        <option value="2">Desarmador</option>
+        <option value="3">Tornillos</option>
+        <option value="4349">Lijas</option>
+        <option value="4350">Botas</option>
+        <option value="4355">Soldadura</option>
+        <option value="4356">Cables de Corriente</option>
+        
+    </select> -->
+
+      <table id="tabla-catalogo" class="cell-border hover table table-dark" style="width:100%;">
+      <colgroup>
                 <col span="1" style="width: 55%;">
 								<col span="1" style="width: 5%;">
 								<col span="1" style="width: 5%;">
@@ -31,15 +44,15 @@
           <td class="td-table">Categoria</td>
           <td class="td-table">Acciones</td>
         </thead>
-
       </table>
+
     </div>
     <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
       <h3>Agregar nueva herramienta</h3>
-      <form id="registro-herramienta">
+      <form id="registro-herramienta" class="registro-herramienta">
         @csrf
         <div class="form-group">
-          <label for="txtDescripcion">Nombre de la herramienta</label>
+          <label for="txtDescripcion">Descripcion</label>
           <textarea class="form-control" id="txtDescripcion" name="txtDescripcion" rows="1" required></textarea>
         </div>
         <div class="form-group">
@@ -65,16 +78,17 @@
         <div id="div-serie">
           <div class="form-group">
             <label for="txtSerie">Serie</label>
-            <input type="text" class="form-control" id="txtSerie" name="txtSerie">
+            <input type="number" class="form-control" id="txtSerie" name="txtSerie">
             <small style="color:red;">*La serie es para objetos unicos</small>
           </div>
         </div>
-
         <div class="form-group">
-        <label for="selCategoria">Categoria de la herramienta:</label>
           <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria"
             name="selCategoria" required>
-            <option disabled selected value> --- Selecciona una categoria --- </option>
+            <option disabled selected value> -- Selecciona un tipo de herramienta --- </option>
+            @foreach($tipos as $tipo)
+            <option value={{$tipo->id}}>{{$tipo->tipo}}</option>
+            @endforeach
           </select>
         </div>
         <button type="submit" class="btn btn-primary">Registrar herramienta</button>
@@ -87,18 +101,13 @@
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel"> ¿Desea eliminar el registro seleccionado?</h5>
+            <h5 class="modal-title" id="exampleModalLabel">Confirmacion</h5>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
           <div class="modal-body">
-
-            <div class="form-group">
-            <label for="motivoTxt2"><strong>Escribe un motivo:</strong></label>
-							<input type="text" id="motivoTxt2" class="form-control" placeholder="El motivo de baja es obligatorio"></input>
-						</div>
-
+            ¿Desea eliminar el registro seleccionado?
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
@@ -138,13 +147,11 @@
                 <input type="number" class="form-control" id="txtSerie2" name="txtSerie2" aria-describedby="emailHelp">
               </div>
               <div class="form-group">
-              <label for="selCategoria2">Tipo</label>
                 <select class="form-control form-select-lg" aria-label="Default select example" id="selCategoria2"
                   name="selCategoria2">
-                  <option disabled selected value> -- Selecciona un tipo de herramienta --- </option>
-                  @foreach($tipos as $tipo)
-                  <option value={{$tipo->id}}>{{$tipo->tipo}}</option>
-                  @endforeach
+                  <option selected>categoria</option>
+                  <option value="1">Pinzas</option>
+                  <option value="2">Martillos</option>
                 </select>
               </div>
             </div>
@@ -165,17 +172,14 @@
   <script type="text/javascript" src="js/catalogo/delete.js"></script>
   <script type="text/javascript" src="js/catalogo/edit.js"></script>
   <script type="text/javascript" src="js/catalogo/update.js"></script>
-  <script type="text/javascript" src="js/catalogo/select.js"></script>
 
   <script>
-    $(document).tooltip();
     $('.rb-agrupacion').prop('checked', false);
 
-$('input[type="radio"]').click(function(){
+  $('input[type="radio"]').click(function(){
+  $("#txtCodigo").val($('#txtCodigo').prop("defaultValue"));
+  $("#txtSerie").val($('#txtSerie').prop("defaultValue"));
 
-        $("#txtCodigo").val($('#txtCodigo').prop("defaultValue"));
-        $("#txtSerie").val($('#txtCodigo').prop("defaultValue"));
-        
         if($(this).attr("value")=="Agrupado"){
             $("#div-codigo").show('slow');
             $("#div-serie").hide('slow');
@@ -186,11 +190,11 @@ $('input[type="radio"]').click(function(){
         }
         }         
     });
-
+    
     $(document).on('click','.descargar-kardex', function(){
       toastr.success('Descargando movimientos de esta herramienta', 'Descarga iniciada', {timeOut: 2000});	
     });
-
+    
 
   </script>
 
