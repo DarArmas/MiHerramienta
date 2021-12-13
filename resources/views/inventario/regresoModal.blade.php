@@ -58,7 +58,7 @@
                         <!-- @csrf -->
 						<div class="form-group">
 						<label>Fecha del regreso (Hoy):</label>
-							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y",time());?>" disabled >
+							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y, h:i:s",time());?>" disabled >
 						</div>
 						<div class="form-group">
 							<label>Solicitante:</label>
@@ -68,6 +68,9 @@
 							<label>Comentario:</label>
 							<textarea name="comentario" id="comentarioOriginal" class="form-control" rows="2" disabled></textarea>
 							<small style="color: rgb(122, 122, 122)">*Este es el comentario que se realizó al momento del prestamo</small>
+						</div>	
+						<div class="form-group">
+						<input type="hidden" name="id_prestamo" id="id_prestamo" class="form-control" disabled/>
 						</div>	
 					</form>
 					<br />
@@ -97,6 +100,9 @@
 								</tbody>
 							</table>
 						</div>
+					</div>
+					<div class="d-flex flex-row">
+						<button type="button" id="btnPerdido" class="btn btn-warning ml-3">Préstamo perdido</button>
 					</div>
 				</div>
       </div>
@@ -161,6 +167,24 @@
 				</div>
 			</div><!--modal faltantes-->
 
+
+			<div class="modal" id="confirmPerdido" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+				aria-hidden="true">
+				<div class="modal-dialog modal-dialog modal-md mt-5" role="document">
+					<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="">Confirmación</h5>
+					</div>
+					<div class="modal-body">
+						<p>¿Estás seguro/a que el prestamo ha sido perdido?<br>Todas las herramientas del préstamo se enviarán al apartado de <strong>herramientas faltantes</strong></p>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" id="btnCerrarPerdido">Cancelar</button>
+						<button type="button" class="btn btn-warning" id="btnConfirmarPerdido">Confirmar</button>
+					</div>
+					</div>
+				</div>
+			</div><!--modal resumen-->
 
 		
 
@@ -265,6 +289,15 @@
 		}
 
 		function cargarEntrega(id){
+			let tbody = `<tr>
+								<td colspan=4 style="text-align: center;">Cargando herramientas</td>
+							</tr>`;
+
+			$("#tabla-entregados tbody").html(tbody);
+			$("#solicitanteRegreso").val('Cargando solicitante');
+			$("#comentarioOriginal").val('Cargando comentario');
+			$('#btnPerdido').prop('disabled', true);
+
 			//cargar las herramientas que serán entregadas
 			$.ajax({
 			url:"inventario/getPrestamoDetalle/"+id,
@@ -275,6 +308,7 @@
 			},
 				success:function(data)
 			{
+				console.log(data);
 				let entregas = JSON.parse(data);
 				id_kardex = id; //succes - si existe este movimiento
 				listarEntregadas(entregas);
@@ -289,8 +323,12 @@
 			var tbody = '';
 			let comentarioP = entregas[0]["comentario"];
 			let solicitante = entregas[0]["solicitante"]
+			let id_kardex = entregas[0]["id_kardex"];
 			$("#solicitanteRegreso").val(solicitante);
+			$("#id_prestamo").val(id_kardex);
 			$("#comentarioOriginal").val(comentarioP);
+			$('#btnPerdido').prop('disabled', false);
+			
 			entregas.forEach(entrega => {
 				tbody += `<tr>
 								<td>${entrega["id_herramienta"]}</a></td>
@@ -515,6 +553,62 @@
 				});			
 
 		});
+
+
+
+		$('#listaRegresos #btnPerdido').click(function(){
+			$('#confirmPerdido').modal({
+                backdrop: 'static',
+                keyboard: false
+            });
+		});
+
+		$('#confirmPerdido #btnCerrarPerdido').click(function(){
+			$('#confirmPerdido').modal('toggle');
+		});
+
+		$('#confirmPerdido #btnConfirmarPerdido').click(function(){
+			let id_prestamo = $('#id_prestamo').val();
+			$(this).prop('disabled', true);
+			$(this).text('Enviando a pendientes...');
+
+			$.ajax({
+                  url:"inventario/perderPrestamo/"+id_prestamo,
+                  method:"GET",
+                  error: function(error) {
+                    $('#confirmPerdido').modal('toggle');
+                    toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
+					$('#btnConfirmarPerdido').prop('disabled', false);
+                    return false;
+                  },
+                  success:function(response)
+                  {
+
+                    if(response){
+						toastr.warning('Todas las herramientas del prestamo se encuentran en lista de pendientes', 'Préstamo perdido', {timeOut: 2000});
+						setTimeout(()=>{$('#confirmPerdido').modal('toggle');}, 500);
+						setTimeout(()=>{$('#listaRegresos').hide(); $('#backdrop').fadeOut(100);}, 1000);
+						setTimeout(()=>{$('#regresoModal').modal('toggle');
+										$('#btnConfirmarPerdido').prop('disabled', false); $('#btnConfirmarPerdido').text('Confirmar'); 
+										$('#tabla-inventario').DataTable().ajax.reload(null,false);
+										}, 1500);
+						
+					// setTimeout(function(){
+					// 	toastr.warning('Todas las herramientas del prestamo se encuentran en lista de pendientes', 'Préstamo perdido', {timeOut: 2000});
+					// 	//$('#confirmPerdido').modal('toggle');
+					// 	$('#listaRegresos').hide();
+					// 	$('#backdrop').fadeOut(100);
+					// 	$('#regresoModal').modal('toggle');
+					// 	$('#tabla-inventario').DataTable().ajax.reload(null,false);
+					// 	$('#btnConfirmarPerdido').prop('disabled', false);
+					// }, 2000);	
+                      
+                    }
+                  },
+                });
+		});
+
+
 
 	});
 

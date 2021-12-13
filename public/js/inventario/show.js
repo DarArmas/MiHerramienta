@@ -22,6 +22,7 @@ $(document).ready(function(){
     ],
     responsive: true,
     autoWidth: false,
+    pageLength: 25,
     "language": {
         searchPlaceholder: "Codigo | Serie | Descripcion",
         "lengthMenu": "Mostrar _MENU_ registros por página",

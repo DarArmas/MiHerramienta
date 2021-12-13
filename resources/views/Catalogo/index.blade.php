@@ -2,10 +2,9 @@
 @section('contenido')
 
 <div class="container mt-4">
-<h3 class="text-center" style="padding-bottom:5px">CATALOGO</h3>
   <ul class="nav nav-tabs" id="myTab" role="tablist">
     <li class="nav-item">
-      <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home"
+      <a class="nav-link" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home"
         aria-selected="true">Catalogo</a>
     </li>
     <li class="nav-item">
@@ -16,12 +15,13 @@
   <br>
   <div class="tab-content" id="myTabContent">
     <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+
     <table id="tabla-catalogo" class="cell-border hover table table-dark" style="width:100%;">
     <colgroup>
-                <col span="1" style="width: 55%;">
-								<col span="1" style="width: 5%;">
-								<col span="1" style="width: 5%;">
-								<col span="1" style="width: 15%;">
+                <col span="1" style="width: 40%;">
+								<col span="1" style="width: 10%;">
+								<col span="1" style="width: 10%;">
+								<col span="1" style="width: 20%;">
 								<col span="1" style="width: 20%;">
 			</colgroup>
         <thead>
@@ -61,6 +61,12 @@
             <input type="number" class="form-control" id="txtCodigo" name="txtCodigo">
             <small style="color:red;">*El codigo es para agrupados</small>
           </div>
+          <div class="custom-control custom-checkbox mb-3">
+                <input class="custom-control-input" type="checkbox" value="" id="checkConsumible" title="Selecciona si el artículo es consumible">
+                <label class="custom-control-label" for="checkConsumible">
+                    Artículo consumible
+                </label>
+            </div>
         </div>
         <div id="div-serie">
           <div class="form-group">
@@ -93,7 +99,10 @@
             </button>
           </div>
           <div class="modal-body">
-
+          <div class="form-group">
+            <label for="motivoTxt2"><strong>Escribe tu contraseña:</strong></label>
+							<input type="password" id="pass-eliminar" class="form-control"></input>
+						</div>
             <div class="form-group">
             <label for="motivoTxt2"><strong>Escribe un motivo:</strong></label>
 							<input type="text" id="motivoTxt2" class="form-control" placeholder="El motivo de baja es obligatorio"></input>
@@ -143,6 +152,8 @@
                   name="selCategoria2">
                   <option disabled selected value> -- Selecciona un tipo de herramienta --- </option>
                   @foreach($tipos as $tipo)
+                    <!--necesito esto cargado desde el momento que se carga la vista para que muestre el tipo de herramienta al cargar index
+                             por eso dejo blade solo la primera vez, una vez que se da click actualiza la lista-->
                   <option value={{$tipo->id}}>{{$tipo->tipo}}</option>
                   @endforeach
                 </select>
@@ -168,6 +179,17 @@
   <script type="text/javascript" src="js/catalogo/select.js"></script>
 
   <script>
+
+    const href = window.location.search;
+    const urlParams = new URLSearchParams(href);
+    const unica = urlParams.get('unica')
+    
+    if(unica !== null){
+      $('[href="#profile"]').tab('show');
+    }else{
+      $('[href="#home"]').tab('show');
+    }
+
     $(document).tooltip();
     $('.rb-agrupacion').prop('checked', false);
 

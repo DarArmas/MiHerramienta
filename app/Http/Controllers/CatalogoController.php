@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Support\Facades\DB; //agregada
-use Illuminate\Http\Request; //agregado
+use Illuminate\Support\Facades\DB; 
+use Illuminate\Http\Request; 
 use DataTables;
 
-//load phpspreadsheet class using namespaces
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -19,6 +21,13 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class CatalogoController extends Controller{
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+
+
     public function index(Request $request){
         if($request->ajax()){
             $query = 'SELECT catalogo.id, catalogo.descripcion, catalogo.codigo, catalogo.numserie, tipo_herramienta.tipo' 
@@ -34,15 +43,17 @@ class CatalogoController extends Controller{
                 ->addColumn('action', function($herramientas){
                     $acciones = '<a href="javascript:void(0)" onclick="editarHerramienta('. $herramientas->id .')" class="btn btn-info btn-sm">Editar</a>';
                     $acciones .= '&nbsp;&nbsp;&nbsp;<button type="button" name="delete" id="'. $herramientas->id .'" class="delete btn btn-danger btn-sm">Eliminar</button>';
-                    // $acciones .= '&nbsp;&nbsp;&nbsp;<button type="button" value="'. $herramientas->id .'" class="btn btn-success btn-sm descargar-kardex">s</button>';
-                    $acciones .= '&nbsp;&nbsp;&nbsp;<a href="'.route('catalogo.export', ['id'=> $herramientas->id]).'" class="btn btn-success btn-sm descargar-kardex" title="Descargar todos los movimientos de esta herramienta"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-download" width="16" height="16" viewBox="2 0 21 21" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    $acciones .= '&nbsp;&nbsp;&nbsp;<a href="'.route('export.movimientos', ['id'=> $herramientas->id]).'" 
+                    class="btn btn-success btn-sm descargar-kardex" title="Descargar todos los movimientos de esta herramienta">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-download" 
+                        width="16" height="16" viewBox="2 0 21 21" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                     <path d="M14 3v4a1 1 0 0 0 1 1h4" />
                     <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
                     <line x1="12" y1="11" x2="12" y2="17" />
                     <polyline points="9 14 12 17 15 14" />
                   </svg></a>';
-                     //$acciones .= '&nbsp;&nbsp;&nbsp;<a href="<?=php echo route("catalogo.export")" class="btn btn-success btn-sm descargar-kardex">s</a>';
+                    
                     return $acciones; 
                 })
                 ->rawColumns(['action'])
@@ -50,35 +61,106 @@ class CatalogoController extends Controller{
         }
 
         $tipos_herramienta = DB::select('SELECT * FROM tipo_herramienta');
-        //return view('catalogo.index')->with('tipos', $tipos_herramienta);
         return view('Catalogo.index')->with('tipos', $tipos_herramienta);
-
 
     }
     
     public function registrar(Request $request){
 
-        $descripcion = ucfirst($request->descripcion);
-        $codigo = $request->codigo;
-        $numserie = $request->numserie;
+        $descripcion = ucfirst(trim($request->descripcion));
+        $codigo = trim($request->codigo);
+        $numserie = trim($request->numserie);
+        $consumible = $request->consumible;
         $tipo = $request->tipo == 'null' ? null : $request->tipo;
-        
+        $personal = Auth()->user()->name;
+     
 
         //codigo o serie estara vacio, por eso cambia el query
         if(empty($numserie)){
-            $id_mov = DB::table('catalogo')->insertGetId(
+
+             //solo comparar si activo=1, activo=false equivalen a herramienta eliminada
+
+            $repetidos = DB::table('catalogo')
+                        ->where('activo','=',1)
+                        ->where('codigo','=', $codigo)
+                        ->get();
+
+            if(count($repetidos) > 0){
+                return response()->json(['error' => 'codigo']);
+            }
+
+           
+            $consumible = $consumible == 'true' ? 1 : 0;
+           
+
+            $id_catalogo = DB::table('catalogo')->insertGetId(
                 array(
                     'descripcion' => $descripcion,
                     'codigo' => $codigo,
                     'tipo' => $tipo,
+                    'consumible' => $consumible
                 )
             );
         
-            if(empty($id_mov)) abort(500);  
+            if(empty($id_catalogo)) abort(500);  
+
+
+            $id_kardex = DB::table('kardex')->insertGetId(
+                array('movimiento' => 6, 'descripcion' => 'Registro de herramienta', 'personal'=>$personal)
+            );
+
+            if(empty($id_kardex)){
+                //no agregar herramienta a catalogo si no se puede crear el movimiento
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);
+            }
+
+
+            $id_kardex_detalle = DB::table('kardex_detalle')->insertGetId(
+                array(
+                    'id_kardex' => $id_kardex,
+                    'id_herramienta' => $id_catalogo,
+                )
+            );
+
+            if(empty($id_kardex_detalle)){
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);    
+            };
+
+
+            $id_inventario = DB::table('inventarioutl')->insertGetId(
+                array(
+                    'herramienta' => $id_catalogo,
+                    'qtyo' => 0,
+                    'qtyf' => 0,
+                    'qtyc' => 0
+                )
+            );
+
+            if(empty($id_inventario)){
+                //si no se puede crear el registro en el inventario, borrar movimiento y borrar herramienta
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);
+            } 
         }
 
         if(empty($codigo)){
-              $id_mov = DB::table('catalogo')->insertGetId(
+
+            //solo comparar si activo=1, activo=false equivalen a herramienta eliminada
+            $repetidos = DB::table('catalogo')
+                        ->where('activo','=',1)
+                        ->where('numserie', '=', $numserie)
+                        ->get();
+
+            if(count($repetidos) > 0){
+                return response()->json(['error' => 'serie']);
+            }
+
+
+              $id_catalogo = DB::table('catalogo')->insertGetId(
                 array(
                     'descripcion' => $descripcion,
                     'numserie' => $numserie,
@@ -86,28 +168,116 @@ class CatalogoController extends Controller{
                 )
             );
         
-            if(empty($id_mov)) abort(500);
+            if(empty($id_catalogo)) abort(500);
+
+
+            $id_kardex = DB::table('kardex')->insertGetId(
+                array(
+                    'movimiento' => 6,
+                    'descripcion' => 'Herramienta nueva',
+                    'personal'=>$personal
+                )
+            );
+
+            if(empty($id_kardex)){
+                //no agregar herramienta a catalogo si no se puede crear el movimiento
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);
+            }
+
+            $id_kardex_detalle = DB::table('kardex_detalle')->insertGetId(
+                array(
+                    'id_kardex' => $id_kardex,
+                    'id_herramienta' => $id_catalogo,
+                )
+            );
+
+            if(empty($id_kardex_detalle)){
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);    
+            };
+
+
+            $id_inventario = DB::table('inventarioutl')->insertGetId(
+                array(
+                    'herramienta' => $id_catalogo,
+                    'qtyo' => 0,
+                    'qtyf' => 0,
+                    'qtyc' => 0
+                )
+            );
+
+            if(empty($id_inventario)){
+                //si no se puede crear el registro en el inventario, borrar la herramienta y el moviemiento
+                DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);
+            } 
+
+            //si es un articulo unico (numserie), la herramienta se añade automaticamente con 1 elementos
+            $id_kardex2 = DB::table('kardex')->insertGetId(
+                array(
+                    'movimiento' => 3,
+                    'descripcion' => 'Llegada de herramienta unica'
+                )
+            );
+
+            if(empty($id_kardex2)) abort(500);
+
+            $id_kardex_detalle2 = DB::table('kardex_detalle')->insertGetId(
+                array(
+                    'id_kardex' => $id_kardex2,
+                    'id_herramienta' => $id_catalogo,
+                    'qty' => 1
+                )
+            );
+
+            if(empty($id_kardex_detalle2)) abort(500);
+
+            //en where puede ser herramienta=id o el ultimo registro insertado
+            $inventario_update = DB::table('inventarioutl')
+                                ->where('herramienta', $id_catalogo)
+                                ->update(['qtyo' => 1, 'qtyf' => 1]);
+
+            if($inventario_update == false){
+                 //si no se puede actualizar el registro en el inventario, borrar la herramienta y el moviemiento
+                 DB::table("catalogo")->orderBy("id", "desc")->take(1)->delete();
+                 DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                 abort(500);
+            }
+
 
         }
-     
-        //$herramienta = DB::select($query);
+
         return back();
 
     }
 
     public function eliminar(Request $request){
         $id = $request->id;
+        $password_input = trim($request->password);
         $motivo = ucfirst($request->motivo);
+        $id_active_user = Auth::id();
+
+        $result_info_user = DB::table('users')->select('password','name')->where('id', '=', 6)->get();
+        $password_hash = $result_info_user[0]->password;
+        $user_name = $result_info_user[0]->name;
+        
+        if (Hash::check($password_input, $password_hash) == false) {
+            return response()->json(['success'=> false,'error' => 'contraseña']);
+        }
+        
 
         $result_inventario = DB::table('inventarioutl')
                     ->select('qtyc')
                     ->where('herramienta', '=', $id)
                     ->get();
+                    
         if(count($result_inventario)  > 0) $prestadas = $result_inventario[0]->qtyc;
         
         if($prestadas > 0){
-        return response()->json(['success'=> false, 'cantidad'=>$prestadas]);
-            //return 'Hay '. $prestadas.' articulos de este tipo en prestamos';
+        return response()->json(['success'=> false,'error' => 'pendientes', 'cantidad'=>$prestadas]);
         }
 
 
@@ -122,7 +292,7 @@ class CatalogoController extends Controller{
                 array(
                     'movimiento' => 4,
                     'descripcion' => $motivo,
-                    'estado' => null
+                    'solicitante' => $user_name.'(admin)'
                 )
             );
 
@@ -186,6 +356,22 @@ class CatalogoController extends Controller{
 
     }
 
+    public function fetchTool($id){
+        //funcion: recibir id de herramienta y regresar toda la infromacion
+        if(isset($id)){
+            $herramienta = DB::table('catalogo')
+            ->where('id', '=', $id)
+            ->where('activo','=', true)
+            ->get();
+        
+            if(!empty($herramienta)){
+                return $herramienta[0];
+            }else{
+                abort(500);
+            }
+        }
+    }
+
     public function fetchCategorias(){
 
         //$query = DB::select('SELECT * FROM tipo_herramienta');
@@ -246,14 +432,13 @@ class CatalogoController extends Controller{
         ];
         //end of arrays
     
-            $sql = 'SELECT catalogo.descripcion AS "nombre", catalogo.codigo, catalogo.numserie, kardex.descripcion, kardex.fecha, kardex.solicitante, kardex_detalle.qty, movimientos.entrada FROM movimientos'
+            $sql = 'SELECT catalogo.descripcion AS "nombre", catalogo.codigo, catalogo.numserie, kardex.descripcion, kardex.fecha, kardex.solicitante, kardex.personal, kardex_detalle.qty, movimientos.entrada FROM movimientos'
             .' INNER JOIN kardex ON kardex.movimiento = movimientos.id'
             .' INNER JOIN kardex_detalle ON kardex_detalle.id_kardex = kardex.id'
             .' INNER JOIN catalogo ON catalogo.id = kardex_detalle.id_herramienta'
             .' WHERE catalogo.id = '.$id;
 
             $result = DB::select($sql);
-
             $celdaFinal = count($result)+3;
         
 
@@ -293,10 +478,10 @@ class CatalogoController extends Controller{
 
         //poner encabezados
         $hojaActiva->setCellValue('A2', $result[0]->nombre);
-        $hojaActiva->mergeCells('A2:G2');
+        $hojaActiva->mergeCells('A2:H2');
         //$hojaActiva->getStyle('A2')->getFont()->setSize(20);
         $hojaActiva->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $hojaActiva->getStyle('A2:G2')->applyFromArray($tableTitle);
+        $hojaActiva->getStyle('A2:H2')->applyFromArray($tableTitle);
 
         //esto es para ajustar el width de las columnas
         // $hojaActiva->getColumnDimension('A')->setWidth(50);
@@ -323,10 +508,13 @@ class CatalogoController extends Controller{
 
         $hojaActiva->getColumnDimension('G')->setWidth(25);
         $hojaActiva->setCellValue('G3', "Solicitante");
+
+        $hojaActiva->getColumnDimension('H')->setWidth(25);
+        $hojaActiva->setCellValue('H3', "Personal");
         
 
         //background color encabezados
-        $hojaActiva->getStyle('A3:G3')->applyFromArray($tableHead);
+        $hojaActiva->getStyle('A3:H3')->applyFromArray($tableHead);
 
 
 
@@ -346,6 +534,8 @@ class CatalogoController extends Controller{
             $hojaActiva->setCellValue('E'.$fila, $row->qty)->getStyle('E')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $hojaActiva->setCellValue('F'.$fila, $row->entrada)->getStyle('F')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $hojaActiva->setCellValue('G'.$fila, $row->solicitante)->getStyle('G')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $hojaActiva->setCellValue('H'.$fila, $row->personal)->getStyle('H')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
 
             //Pase a la fila de abajo
             $fila++;

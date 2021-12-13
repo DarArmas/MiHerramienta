@@ -3,6 +3,7 @@ $(document).ready(function(){
 
     var tablaCatalogo = $('#tabla-catalogo').DataTable({
     processing:true,
+    order:  [0, "asc"], //ordenar por descripcion a-z
     serverSide:true,
     ajax:{
         url: "/catalogo",
@@ -21,6 +22,7 @@ $(document).ready(function(){
     ],
     responsive: true,
     autoWidth: false,
+    "pageLength": 25,
     "language": {
         searchPlaceholder: "Descripcion | código | serie",
         "lengthMenu": "Mostrar _MENU_ registros por página",

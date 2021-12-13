@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    <title>Almacén - Local</title>
+    <title>Almacén</title>
     {{-- DataTables Responsive --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
 
@@ -18,7 +18,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha512-uto9mlQzrs59VwILcLiRYeLKPPbS/bT71da/OEBYEwcdNUk8jYIy+D176RYoop1Da+f9mvkYrmj5MCLZWEtQuA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.11.2/datatables.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js" integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -31,7 +31,7 @@
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark nav-theme">
-  <a class="navbar-brand" href="#">UTLD</strong></a>
+  <a class="navbar-brand" href="{{route('inventario.index')}}"><img src=".\images\utld-logo.png" width="100" height="35" ></a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -46,18 +46,54 @@
       <li class="nav-item">
         <a class="nav-link nav-view" href="{{route('tipo.index')}}">Tipos de herramientas</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link nav-view" href="{{route('entradas.index')}}">Tipos de Entradas</a>
-      </li>
     </ul>
+
+
+    <ul class="navbar-nav ml-auto">
+
+    <!-- QUITAR AL FINAL EL GUEST PARA QUE YA NO DEJE VER LAS VISTAS SIN INICIAR SESION -->
+
+        @guest
+
+        @else
+            <li class="nav-item dropdown">
+                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                    {{ Auth::user()->name }}
+                </a>
+
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">      
+
+                <a class="dropdown-item" href="{{ route('register') }}">
+                            
+                          </a>
+
+                @if (Auth::user()->id == 6)
+                <a class="dropdown-item" href="{{ route('register') }}">
+                            Registrar nuevo usuario
+                          </a>
+                          @endif
+
+                    <a class="dropdown-item" href="{{ route('logout') }}"
+                        onclick="event.preventDefault();
+                                      document.getElementById('logout-form').submit();">
+                        {{ __('Cerrar Sesión') }}
+                    </a>
+
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
+                </div>
+            </li>
+        @endguest
+
+    </ul>
+
   </div>
 </nav>
 
-<p>Version local</p>
-
 @section('contenido')
 @show
-    
+
 <script>
   const currentLocation = location.href;
   const menuItem = document.querySelectorAll('.nav-view');

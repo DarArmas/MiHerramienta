@@ -17,7 +17,7 @@
                         <!-- @csrf -->
 						<div class="form-group">
 						<label>Fecha del préstamo (Hoy):</label>
-							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y",time());?>" disabled >
+							<input type="text" class="form-control" id="fecha" name="fecha" value="<?=date("d-m-Y, h:i:s",time());?>" disabled >
 						</div>
 						<div class="form-group">
 							<label>Solicitante:</label>
@@ -99,8 +99,8 @@
 					</div>
 						<div class="elementos-opcionales">
 							<button type="button" id="btnFlush" class="btn btn-primary ml-3">Vaciar</button>
-							
 						</div>
+					</div>
 				</div>
 			</div>
 			<br />
@@ -166,6 +166,7 @@
 							</ul>
 						</div>
 					</div>
+
 					<div class="modal-footer">
 						<button type="button" class="btn btn-secondary" id="close-ticket-warning">Cerrar</button>
 					</div>
@@ -174,7 +175,6 @@
 			</div><!--modal advertencia ticket-->
  	
 			
-          </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
             <button type="button" class="btn btn-success" id="btnPrestamo" >Realizar prestamo</button>
@@ -281,6 +281,7 @@ $(document).ready(function(){
 				},
 				success:function(data)
 				{
+
 					toastr.success(data, 'Exito', {timeOut: 2000});
 					setTimeout(function(){
 						selected = [];
@@ -313,7 +314,7 @@ $(document).ready(function(){
 				},
 				success:function(data)
 				{
-					const herramienta = JSON.parse(data);
+					const herramienta = data;
 					const cantidad_maxima = "Max: " + herramienta.qtyf;
 					$('#cantidad_input').prop("placeholder", cantidad_maxima);
 				},
@@ -600,6 +601,7 @@ $(document).ready(function(){
 				opciones.push($(this)[0].innerHTML)
 			});
 
+			//si ninguna el val de herramienta_select no coincide con las opciones
 			if(opciones.length > 0 && opciones.includes($("#herramienta_select").val()) == false){
 					alert("No modificar la opcion seleccionada por favor");
 					return false;
@@ -621,15 +623,13 @@ $(document).ready(function(){
 				$.ajax({
 				url:"inventario/getTool/"+herramienta_codigo,
 				method:"GET",
-				//enviar el codigo o serie de la herramienta
-				//data:{codigo_serie: herramienta_codigo},
 				error: function(data) {
 					toastr.error('Hubo un error en la parte del servidor', 'Error', {timeOut: 3000});
 					return false;
 				},
 				success:function(data)
 				{
-					const herramienta = JSON.parse(data);
+					const herramienta = data;
 					const cantidad_maxima = herramienta.qtyf;
 					const herramientajson = {
 						"id_seleccionados": id_seleccionados,

@@ -42,15 +42,15 @@
 <div class="mt-4 container">
   <div class="">
     <div class="p-4">
-      <h3 class="text-center"><i class="fa fa-pencil" aria-hidden="true"></i>Agregar Nuevo Tipo de Herramienta</h3>
+      <!-- <h3 class="text-center letra-tipo"><i class="fa fa-pencil" aria-hidden="true"></i>Agregar Nuevo Tipo de Herramienta</h3> -->
     <form id="registro-tipo">
       @csrf
       <div class="nuevoTipo">
-        <label class="ltipo" style="margin-top: 2%;" for="txtTipo">Nuevo Tipo</label>
+        <!-- <label class="ltipo" style="margin-top: 2%;" for="txtTipo">Nuevo Tipo</label> -->
       <div class="form-inline">
-          <input style="width: 80%" type="text" class="form-control itipo" id="txtTipo" name="txtTipo" required>
-          <div class="centerbutton">
-            <button style="margin-left: 10px;" type="submit" class="botontipo btn btn-primary">Registrar tipo</button>
+          <input style="width: 85%" type="text" class="form-control itipo" id="txtTipo" name="txtTipo" placeholder="Agrega un nuevo tipo de herramienta" required>
+          <div>
+            <button style="margin-left: 10px; width:100%" type="submit" class="botontipo btn btn-primary">Registrar tipo</button>
           </div>
       </div>
       
@@ -123,7 +123,7 @@
 								<col span="1" style="width: 20%;">
 			</colgroup>
         <thead>
-          <td class="td-table" id="tipo" colspan="1">Tipo</td>
+          <td class="td-table" id="tipo" colspan="1">Tipo de herramienta</td>
           <td class="td-table">Acciones</td>
         </thead>
       </table>

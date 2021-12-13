@@ -1,5 +1,6 @@
 :root{
-    --backgroundColor: #eee5e9;
+    /* --backgroundColor: #eee5e9; */
+    --backgroundColor: #ECF0F1;
     --tableBackground:  #cc2936;
     --tableFontColor: white;
     --navBackground: #08415c;
@@ -24,7 +25,7 @@ td{
 
 
 .nav-theme{
-    background-color: var(--tableBodyFontColor);
+    background-color: var(--navBackground);
 }
 
 .dt-body-center {
@@ -76,6 +77,7 @@ input, select{
 
 thead .td-table {
     padding: 10px 10px !important;
+    line-height: 15px;
  }
 
 
@@ -84,10 +86,26 @@ thead .td-table {
      padding: 5px 10px !important;
  }
 
+ #tabla-cortes td,
+ #tabla-cortes th{
+     text-align: center !important;
+ }
 
+ #tabla-catalogo td{
+    max-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+ }
+  
+  #tabla-catalogo td:hover {
+    overflow: visible !important;
+    white-space: normal !important;
+    cursor: pointer;
+  }
 
 .nav-tabs{
-    background-color:#eee5e9;
+    background-color:#ECF0F1;
   }
 
   .nav-tabs > li > a{
@@ -98,7 +116,7 @@ thead .td-table {
     background-color: #303136 !important;
       border: medium none;
       border-radius: 0;
-      color:#eee5e9 !important;
+      color:#ECF0F1 !important;
   }
 
 .nav .active{
@@ -122,6 +140,12 @@ thead .td-table {
 .my-custom-scrollbar-resumen {
     position: relative;
     max-height: 12.25rem;
+    overflow: auto;
+}
+
+.my-custom-scrollbar-corte{
+    position: relative;
+    max-height: 28.25rem;
     overflow: auto;
 }
 
@@ -198,7 +222,8 @@ thead .td-table {
         font-weight: bold;
       }
 
-      #dropdown-ajustes a{
+      #dropdown-ajustes a,
+      #button-dropdown-cortes a{
         cursor: pointer;
       }
 
@@ -206,6 +231,35 @@ thead .td-table {
         display: inline;
         text-align: center;
       }
+
+      .btn-principales{
+        display:inline-block;
+        width:30%;
+        padding:20px;
+        text-align: center;
+        font-weight: bold;
+        color:black;
+        font-size: 20px;
+        /* box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.8); */
+        /* background: linear-gradient(to bottom right, #0F8BCF, #3A7CA0); */
+        background: linear-gradient(to bottom right, #FFC300, #F1C40F);
+        transition: none;
+      }
+
+      .btn-principales:hover{
+        /* background: #106493; */
+        background: #D4AC0D;
+      }
+
+      .btn{
+        box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.8);
+        }
+
+
+
+
+
+
 
 
 

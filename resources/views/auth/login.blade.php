@@ -4,7 +4,6 @@
 
 <?php
   $bg = array('INTS_UTLD_00.jpg', 'INTS_UTLD_04.JPG', 'INTS_UTLD_06.JPG', 'INTS_UTLD_09.JPG', 'UTLD-13.jpg', 'INST_UTLD_10.jpeg'); // array of filenames
-
   $i = rand(0, count($bg)-1); // generate random number size of the array
   $selectedBg = "$bg[$i]"; // set variable equal to which random filename was chosen
 ?>
@@ -76,11 +75,8 @@ background: url(images/<?php echo $selectedBg; ?>) no-repeat;
                                     {{ __('Login') }}
                                 </button>
 
-                                @if (Route::has('password.request'))
-                                    <a class="btn btn-link" href="{{ route('password.request') }}">
-                                        {{ __('¿Olvidaste tu contraseña?') }}
-                                    </a>
-                                @endif
+                                <!--AQUI IBA EL DE RESETEAR LA CONTRASEÑA -->
+
                             </div>
                         </div>
                     </form>

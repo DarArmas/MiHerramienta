@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Support\Facades\DB; //agregada
-use Illuminate\Http\Request; //agregado
+use Illuminate\Support\Facades\DB; 
+use Illuminate\Http\Request; 
 use DataTables;
 
-//load phpspreadsheet class using namespaces
+
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -19,21 +20,22 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class InventarioController extends Controller{
+
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function index(Request $request){
-
-
         if($request->ajax()){
-            /**SELECT inventarioutl.id, catalogo.descripcion, inventarioutl.qtyo AS 'Cantidad original', inventarioutl.qtyf AS 'Cantidad fisica', inventarioutl.qtyc AS 'Cantidad comprometida' 
-             * FROM inventarioutl INNER JOIN catalogo ON inventarioutl.herramienta = catalogo.id;  */
-
             $query = 'SELECT inventarioutl.id, catalogo.codigo, catalogo.numserie, catalogo.descripcion, inventarioutl.qtyo, inventarioutl.qtyf, inventarioutl.qtyc'
                 . ' FROM inventarioutl' 
                 . ' INNER JOIN catalogo'
-                . ' ON inventarioutl.herramienta = catalogo.id';
+                . ' ON inventarioutl.herramienta = catalogo.id'
+                . ' WHERE catalogo.activo = 1';
 
             $inventarios = DB::select($query);
 
-            //datatable no carga al enviar codigo y numserie juntos, solucion -> enviar un arreglo propio
             $data = array();
             foreach($inventarios as $inventario){
                 $codigo = '';
@@ -67,8 +69,11 @@ class InventarioController extends Controller{
     
 
     public function fetchTools(){
+        //solo las herramientas que tengan su registro en inventario
         $query = 'SELECT catalogo.id, catalogo.descripcion, catalogo.codigo, catalogo.numserie, inventarioutl.qtyf FROM catalogo '  
-            . 'INNER JOIN inventarioutl ON catalogo.id = inventarioutl.herramienta';
+            . 'INNER JOIN inventarioutl ON catalogo.id = inventarioutl.herramienta'
+            . ' WHERE catalogo.activo = true'
+            . ' ORDER BY catalogo.numserie';
         
         $result = DB::select($query);
 
@@ -98,12 +103,13 @@ class InventarioController extends Controller{
     }
 
     public function getTool($codigo){
+        //funcion: recibir codigo o numero de serie y regresar toda la información de esa herramienta
         $codigo_serie = $codigo;
-        $query = 'SELECT catalogo.id, catalogo.descripcion, inventarioutl.qtyf FROM catalogo ' 
+        $query = 'SELECT catalogo.id, catalogo.descripcion, inventarioutl.qtyf, inventarioutl.qtyo FROM catalogo ' 
             . 'INNER JOIN inventarioutl ON catalogo.id = inventarioutl.herramienta '
-            . 'WHERE catalogo.numserie = "'.$codigo_serie.'" OR catalogo.codigo = "' . $codigo_serie . '"';
+            . 'WHERE (catalogo.numserie = "'.$codigo_serie.'" OR catalogo.codigo = "' . $codigo_serie . '")'
+            . 'AND catalogo.activo = true';
     
-        // $resultado = mysqli_query($connect, $query);
         $resultado = DB::select($query);
     
         if(count($resultado) == 0){
@@ -116,18 +122,146 @@ class InventarioController extends Controller{
             $json[] = array(
                 'id' => $row->id,
                 'descripcion' => $row->descripcion,
-                'qtyf' => $row->qtyf
+                'qtyf' => $row->qtyf,
+                'qtyo' => $row->qtyo
             );    
         }
     
         $jsonstring =  json_encode($json[0]);
-        return $jsonstring;
+        return $json[0];
     }
+
+    public function addArticulos(Request $request){
+        if(isset($request)){
+            $herramienta_id = trim($request->herramienta);
+            $cantidad = trim($request->cantidad);
+            $personal = Auth()->user()->name;
+        }
+         
+
+        if(!empty($herramienta_id) && !empty($cantidad) && !empty($personal)){
+            //primero se hace el cambio y luego se registra el movimiento
+
+            // 'UPDATE inventarioutl SET qtyo = (qtyo + ' . $cantidad . '), qtyf = (qtyo - qtyc) WHERE herramienta = '. $herramienta_id;
+            $resultUpdate = DB::table('inventarioutl')
+             ->where('herramienta', $herramienta_id)
+             ->update(['qtyo' => DB::raw('qtyo +'.$cantidad),
+                        'qtyf' => DB::raw('qtyo-qtyc')]);
+
+            if(!$resultUpdate) abort(500);
+
+            $id_kardex = DB::table('kardex')->insertGetId(
+                array(
+                    'movimiento' => 3,
+                    'descripcion' => 'Entrada de material',
+                    'personal' => $personal
+                )
+            );
+        
+            if(empty($id_kardex)){
+                DB::table('inventarioutl')
+                ->where('herramienta', $herramienta_id)
+                ->update(['qtyo' => DB::raw('qtyo-'.$cantidad),
+                           'qtyf' => DB::raw('qtyo-qtyc')]);
+                abort(500);
+            } 
+
+            $id_kardex_detalle = DB::table('kardex_detalle')->insertGetId(
+                array(
+                    'id_kardex' => $id_kardex,
+                    'id_herramienta' => $herramienta_id,
+                    'qty' => $cantidad
+                )
+            );
+
+            if(empty($id_kardex_detalle)){
+                //si no se puede hacer el registro de kardex detalle, regresa y elimina todo
+                DB::table('inventarioutl')
+                ->where('herramienta', $herramienta_id)
+                ->update(['qtyo' => DB::raw('qtyo-'.$cantidad),
+                           'qtyf' => DB::raw('qtyo-qtyc')]);
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);    
+            };
+
+         }
+
+         if($resultUpdate){
+            return back();
+        }else{
+            abort(500);
+        }
+    }
+
+    public function ajustarArticulos(Request $request){
+        if(isset($request)){
+            $herramienta_id = trim($request->herramienta);
+            $cantidad = trim($request->cantidad);
+            $personal = Auth()->user()->name;
+            $motivo = ucfirst(trim($request->motivo));
+        }
+         
+
+        if(!empty($herramienta_id) && !empty($cantidad) && !empty($personal) && !empty($motivo)){
+            //primero se hace el cambio y luego se registra el movimiento
+
+            // 'UPDATE inventarioutl SET qtyo = (qtyo - ' . $cantidad . '), qtyf = (qtyo - qtyc) WHERE herramienta = '. $herramienta_id;
+            $resultUpdate = DB::table('inventarioutl')
+             ->where('herramienta', $herramienta_id)
+             ->update(['qtyo' => DB::raw('qtyo -'.$cantidad),
+                        'qtyf' => DB::raw('qtyo-qtyc')]);
+
+            if(!$resultUpdate) abort(500);
+
+            $id_kardex = DB::table('kardex')->insertGetId(
+                array(
+                    'movimiento' => 5,
+                    'descripcion' => $motivo,
+                    'personal' => $personal
+                )
+            );
+        
+            if(empty($id_kardex)){
+                DB::table('inventarioutl')
+                ->where('herramienta', $herramienta_id)
+                ->update(['qtyo' => DB::raw('qtyo+'.$cantidad),
+                           'qtyf' => DB::raw('qtyo-qtyc')]);
+                abort(500);
+            } 
+
+            $id_kardex_detalle = DB::table('kardex_detalle')->insertGetId(
+                array(
+                    'id_kardex' => $id_kardex,
+                    'id_herramienta' => $herramienta_id,
+                    'qty' => $cantidad
+                )
+            );
+
+            if(empty($id_kardex_detalle)){
+                //si no se puede hacer el registro de kardex detalle, regresa y elimina todo
+                DB::table('inventarioutl')
+                ->where('herramienta', $herramienta_id)
+                ->update(['qtyo' => DB::raw('qtyo+'.$cantidad),
+                           'qtyf' => DB::raw('qtyo-qtyc')]);
+                DB::table("kardex")->orderBy("id", "desc")->take(1)->delete();
+                abort(500);    
+            };
+
+         }
+
+         if($resultUpdate){
+            return back();
+        }else{
+            abort(500);
+        }
+    }
+
 
 
     public function hacerPrestamo(Request $request){
          $herramientas = $request->selected_list;
          $solicitante = $request->solicitante;
+         $personal = Auth()->user()->name;
          $comentario = $request->comentario == "" ? 'Préstamo ordinario' : $request->comentario;
          $ticket = isset($request->ticket) ? $request->ticket : null; 
          
@@ -138,6 +272,7 @@ class InventarioController extends Controller{
                 'movimiento' => 1,
                 'descripcion' => $comentario,
                 'solicitante' => $solicitante,
+                'personal' => $personal,
                 'idticket' => $ticket,
                 'estado' => 1,
             )
@@ -147,7 +282,7 @@ class InventarioController extends Controller{
         
         //actualizar cantidades en inventario
          foreach($herramientas as $herramienta){
-            $id_kardexD = '';
+            $id_kardexDetalle = '';
             $codigo = $herramienta['codigo'];
             $query = 'SELECT id FROM catalogo WHERE numserie = "'. $codigo .'" OR codigo = "'. $codigo.'"';
             $result = DB::select($query);
@@ -164,7 +299,7 @@ class InventarioController extends Controller{
                 abort(500);
              }
 
-             $id_kardex = DB::table('kardex_detalle')->insertGetId(
+             $id_kardexDetalle = DB::table('kardex_detalle')->insertGetId(
                     array(
                         'id_kardex' => $id_mov,
                         'id_herramienta' => $id,
@@ -172,10 +307,25 @@ class InventarioController extends Controller{
                     )
                 );
 
-            if(empty($id_kardex)) return "Fallo al agregar detalle de alguna herramienta";
+
+            if(empty($id_kardexDetalle)) return "Fallo al agregar detalle de alguna herramienta";
 
          }
          
+         $herramientas_regreso = DB::table('kardex_detalle')
+                                    ->join('catalogo', 'catalogo.id', '=', 'kardex_detalle.id_herramienta')
+                                    ->where('kardex_detalle.id_kardex', '=', $id_mov)
+                                    ->where('catalogo.consumible', '=',0)
+                                    ->get();
+
+
+         //si no hay ninguna herramienta que se tenga que regresar, cierra el prestamo
+        if(count($herramientas_regreso) == 0){
+            $resultUpdate = DB::table('kardex')
+                ->where('id', $id_mov)
+                ->update(['estado' => 0]);
+        }
+                              
        return "Datos insertados satisfactoriamente";
     }
 
@@ -217,6 +367,37 @@ class InventarioController extends Controller{
         return "Se guardó el registro de pérdida";
     }
 
+    public function perderPrestamo($id){
+        //obtener las herramientas del prestamo
+        $herramientas = DB::table('kardex_detalle')
+        ->select('id_herramienta', 'qty')
+        ->where('id_kardex', '=', $id)
+        ->get();
+
+             //crear registro en faltantes cone esdtado 1 (pendiente)
+        foreach($herramientas as $herramienta){
+
+            $insert_faltante = DB::table('faltantes')->insertGetId([
+                'id_herramienta' => $herramienta->id_herramienta,
+                'motivo' => 'Préstamo completo perdido',
+                'cantidad' => $herramienta->qty,
+                'id_mov' => $id,
+                'estado' => 1
+            ]);
+
+            if(empty($insert_faltante)) abort(500);
+        }
+
+        //actualizar el estado del movimiento (cerrar prestamo)
+        $resultUpdate = DB::table('kardex')
+                ->where('id', $id)
+                ->update(['estado' => 0]);
+
+        if(!$resultUpdate) abort(500);      
+
+        return back();
+    }
+
 
     public function getTicket($id_ticket){
         
@@ -234,8 +415,6 @@ class InventarioController extends Controller{
             .' WHERE osticket_db.ost_user.id = (SELECT solicitante FROM peticiones WHERE ticket_id = '.$id_ticket.')';
             $solicitante = DB::select($query);
         }
-        
-        //return $herramientas_ticket;
 
         return [$herramientas_ticket, $solicitante[0]->name];
         
@@ -309,12 +488,22 @@ class InventarioController extends Controller{
     public function getPrestamoDetalle($id ){
 
         if(isset($id) && is_numeric($id)){
-            $query = 'SELECT catalogo.descripcion, catalogo.codigo, catalogo.numserie, kardex_detalle.id_herramienta, kardex_detalle.qty, kardex.descripcion AS comentario, kardex.solicitante FROM kardex_detalle' 
-            .' INNER JOIN catalogo ON kardex_detalle.id_herramienta = catalogo.id'
-            . ' INNER JOIN kardex ON kardex_detalle.id_kardex = kardex.id'
-            .' WHERE id_kardex='.$id;
+            // $query = 'SELECT catalogo.descripcion, catalogo.codigo, catalogo.numserie, kardex_detalle.id_herramienta, kardex_detalle.qty, kardex.descripcion AS comentario, kardex.solicitante FROM kardex_detalle' 
+            // .' INNER JOIN catalogo ON kardex_detalle.id_herramienta = catalogo.id'
+            // . ' INNER JOIN kardex ON kardex_detalle.id_kardex = kardex.id'
+            // .' WHERE id_kardex='.$id;
 
-            $result = DB::select($query);
+            //$result = DB::select($query);
+
+            $result = DB::table('kardex_detalle')
+            ->join('catalogo', 'catalogo.id', '=', 'kardex_detalle.id_herramienta')
+            ->join('kardex', 'kardex.id', '=', 'kardex_detalle.id_kardex')
+            ->select('catalogo.descripcion', 'catalogo.codigo','catalogo.numserie', 'kardex_detalle.id_kardex','kardex_detalle.id_kardex', 'kardex_detalle.qty', 'kardex.descripcion as comentario', 'kardex.solicitante')
+            ->where('kardex_detalle.id_kardex', '=', $id)
+            ->where('catalogo.consumible', '=', 0)
+            ->get();
+
+            //return $result;
 
             if(!$result){
                 abort(500);
@@ -334,6 +523,7 @@ class InventarioController extends Controller{
                 }
 
                 $json[] = array(
+                    'id_kardex' => $row->id_kardex,
                     'descripcion' => $row->descripcion,
                     'id_herramienta' => $codigo,
                     'qty' => $row->qty,
@@ -369,15 +559,15 @@ class InventarioController extends Controller{
 
         $herramientas = $request->entregadas_lista;
         $solicitante = $request->solicitante;
+        $personal = Auth()->user()->name;
         $id_kardex_prestamo = $request->id; //se necesita el id del prestamo para cambiar el estado a 0
-        
-       
+   
        //crear movimiento en kardex y obtener su id
         $id_mov = DB::table('kardex')->insertGetId(
            array(
                'movimiento' => 2,
                'solicitante' => $solicitante,
-               'estado' => NULL,
+               'personal' => $personal,
                'descripcion' => 'Regreso ordinario'
            )
        );
@@ -401,7 +591,7 @@ class InventarioController extends Controller{
                $query = 'UPDATE inventarioutl SET qtyc = (qtyc - ' . $herramienta['cantidad'] . '), qtyf = (qtyo - qtyc) WHERE herramienta = '. $id;
                DB::select($query);
         
-               $query = 'UPDATE kardex SET estado = 0 WHERE id ='.$id_kardex_prestamo;
+               $query = 'UPDATE kardex SET estado = 0, fecha = fecha WHERE id ='.$id_kardex_prestamo;
                 DB::select($query);
             }else{
                 //si no encuentra al menos una herramienta, aborta y elimina el moviemitno ya creado
@@ -427,6 +617,8 @@ class InventarioController extends Controller{
 
 
     }
+
+
 
     /* Metodos de ajustes*/
     public function fetchFaltantes(){
@@ -480,6 +672,7 @@ class InventarioController extends Controller{
             $tipo_mov = '';
             $estado = '';
             $descripcion_mov = '';
+            $personal = Auth()->user()->name;
 
             if($accion == "recuperar"){
                 $estado = 3;
@@ -488,18 +681,20 @@ class InventarioController extends Controller{
             }else if($accion == "eliminar"){
                 $estado = 2;
                 $tipo_mov = 5;
-                $descripcion_mov = "Robo o extravío";
+                $descripcion_mov = "Perdido en préstamo";
             }
             
     
             if(!empty($id) && !empty($estado)){
+
+
                $resultUpdate = DB::table('faltantes')
                 ->where('id', $id)
                 ->update(['estado' => $estado]);
             }
 
             if($resultUpdate == true){
-    
+                    
                 $result = DB::table('faltantes')
                 ->select('id_herramienta','id_mov','cantidad')
                 ->where('id', $id)
@@ -524,6 +719,7 @@ class InventarioController extends Controller{
                     array(
                         'movimiento' => $tipo_mov,
                         'solicitante' => $solicitante,
+                        'personal' => $personal,
                         'descripcion' => $descripcion_mov,
                         'estado' => NULL
                     )
@@ -565,14 +761,183 @@ class InventarioController extends Controller{
         }
        
 
-    } 
+    }
+       /*Fin de metodos de ajustes */
 
 
-    /*Fin de metodos de ajustes */
+    /*inicio de metodos de corte */
+    public function fetchEstado(){
 
+        $result = DB::table('inventarioutl')
+        ->join('catalogo', 'catalogo.id', '=', 'inventarioutl.herramienta')
+        ->select('inventarioutl.id', 'inventarioutl.herramienta','catalogo.codigo', 'catalogo.numserie', 'catalogo.descripcion', 'inventarioutl.qtyo', 'inventarioutl.qtyf', 'inventarioutl.qtyc')
+        ->where('catalogo.activo','=',1)
+        ->get();
+
+        //para ahorrarnos consultas se obtienen las cantidades por programación
+        if(count($result) > 0){
+         
+            $registradas = count($result);
+            $total_unidades = 0;
+            $total_disponibles = 0;
+            $total_comprometidas = 0;
+            $personal = Auth()->user()->name;
+
+            foreach($result as $row){
+                 $total_unidades += $row->qtyo;
+                 $total_disponibles += $row->qtyf;
+                 $total_comprometidas += $row->qtyc;    
+            }
+
+            //asi se castea en php
+            $faltantes = 0;
+            $faltantes += DB::table('faltantes')
+            ->where('estado', '=', 1)
+            ->sum('cantidad');
+            
+           
+            $consumidas = 0;
+            $consumidas += DB::table('inventarioutl')
+                            ->join('catalogo', 'catalogo.id', '=', 'inventarioutl.herramienta')
+                            ->where('catalogo.consumible', '=', 1)
+                            ->sum('qtyc');
+
+            $en_prestamo = $total_comprometidas - $faltantes - $consumidas;
+
+            $info = [
+                    'inventario_estado' => $result,
+                    'numero_herramientas' => count($result),
+                    'total_unidades' => $total_unidades, 
+                    'total_disponibles' => $total_disponibles,
+                    'total_comprometidas' => $total_comprometidas,
+                    'en_prestamo' => $en_prestamo,
+                    'faltantes' => $faltantes,
+                    'consumidas' => $consumidas,
+                    'personal' => $personal];
+
+            return $info;
+
+        }else{
+            return "No hay nada en el inventario";
+        } 
+
+    }
+
+    public function hacerCorte(Request $request){
+       
+
+        if(isset($request) && !empty($request)){
+            $data = $request->data;
+            $herramientas = $data['inventario_estado'];
+            $numero_herramientas = $data['numero_herramientas'];
+            $total_unidades = $data['total_unidades'];
+            $total_disponibles = $data['total_disponibles'];
+            $total_comprometidas = $data['total_comprometidas'];
+            $personal = Auth()->user()->name;
+
+           $id_cortes = DB::table('cortes')->insertGetId(
+                    array(
+                        'registradas' => $numero_herramientas,
+                        'totalArticulos' => $total_unidades,
+                        'totalDisponibles' => $total_disponibles,
+                        'totalComprometidas' => $total_comprometidas,
+                        'personal' => $personal
+                    )
+                );
+    
+                if(empty($id_cortes)) abort(500);
+
+
+            foreach($herramientas as $herramienta){
+                $id_corte_detalle =  DB::table('cortes_detalle')->insertGetId(
+                        array(
+                            'id_corte' => $id_cortes,
+                            'id_herramienta' => $herramienta['herramienta'],
+                            'qtyo' => $herramienta['qtyo'],
+                            'qtyf' => $herramienta['qtyf'],
+                            'qtyc' => $herramienta['qtyc'],
+                        )
+                    );
+
+                    if(empty($id_cortes)){
+                        DB::table('cortes_detalle')
+                        ->where('id_corte',$id_cortes)
+                        ->delete();
+                      
+                        DB::table('cortes')
+                        ->where('id', $id_cortes)
+                        ->delete();
+
+                        abort(500);
+                    } 
+            }
+            return back();
+        }
+        
+    }
+
+    public function fetchCortes(Request $request){
+        
+
+        if($request->ajax()){
+
+            $cortes = DB::table('cortes')
+            ->where('estado', '=', 1)
+            ->get();
+
+            return DataTables::of($cortes)
+                ->addColumn('action', function($cortes){
+                    $acciones = '<a href="'.route('export.corte', ['id'=> $cortes->id]).'" class="btn btn-success btn-sm btn-descargar-corte" title="Descargar este corte">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-download" 
+                                    width="16" height="16" viewBox="2 0 21 21" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                    <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                                    <line x1="12" y1="11" x2="12" y2="17" />
+                                    <polyline points="9 14 12 17 15 14" />
+                                    </svg>
+                                </a>';
+                    $acciones .= '&nbsp;&nbsp;&nbsp;<button name="deleteCorte" id="'. $cortes->id .'" class="delete-corte btn btn-danger btn-sm" title="Eliminar este corte">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="16" height="16" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                                        <line x1="4" y1="7" x2="20" y2="7" />
+                                        <line x1="10" y1="11" x2="10" y2="17" />
+                                        <line x1="14" y1="11" x2="14" y2="17" />
+                                        <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                                        <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                                        </svg>
+                                    </button>';
+                    ;
+                    
+                    return $acciones; 
+                })
+                ->rawColumns(['action'])
+                ->make(true);
+        }
+
+    }
+
+        
+    public function deleteCorte($id){
+        if(isset($id) && !empty($id)){
+            $result = DB::table('cortes')
+            ->where('id', $id)
+            ->update(['estado' => 0]);
+
+            if(!$result){
+            abort(500);
+            }    
+            return back();
+        }else{
+            abort(500);
+        }
+    }
+
+    /*fin de metodos de corte*/ 
+ 
 
     public function indexTicket(Request $request){
-
+        
         return view('tickets.ticketView');
 
     }
@@ -914,5 +1279,6 @@ class InventarioController extends Controller{
         exit;
 
     }
+
 
 }
